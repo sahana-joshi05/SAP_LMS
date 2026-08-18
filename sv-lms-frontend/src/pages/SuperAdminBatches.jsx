@@ -1,0 +1,65 @@
+import React, { useEffect, useState } from 'react';
+import { Layers, Users } from 'lucide-react';
+import Layout from '../components/Layout.jsx';
+import PageHeader from '../components/PageHeader.jsx';
+import Badge from '../components/Badge.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../api.js';
+
+export default function SuperAdminBatches() {
+  const { auth } = useAuth();
+  const [batches, setBatches] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.listBatches(auth.token).then(setBatches).catch((e) => setError(e.message));
+    api.listStudents(auth.token).then(setStudents).catch((e) => setError(e.message));
+  }, []);
+
+  return (
+    <Layout>
+      <PageHeader title="Batches & Students" subtitle="Institute-wide view across every batch and student" />
+      {error && <div className="msg error">{error}</div>}
+
+      <div className="card">
+        <h3><Layers /> All batches</h3>
+        {batches.length === 0 ? (
+          <div className="empty-state">No batches yet.</div>
+        ) : (
+          <table>
+            <thead><tr><th>Batch</th><th>Course</th><th>Mode</th><th>Timing</th><th>Status</th></tr></thead>
+            <tbody>
+              {batches.map((b) => (
+                <tr key={b.id}>
+                  <td>{b.batch_name}</td><td>{b.course_name}</td>
+                  <td><Badge status={b.mode} /></td><td>{b.timing}</td>
+                  <td><Badge status={b.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="card">
+        <h3><Users /> All students</h3>
+        {students.length === 0 ? (
+          <div className="empty-state">No students yet.</div>
+        ) : (
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Enrolled</th><th>Status</th></tr></thead>
+            <tbody>
+              {students.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.name}</td><td>{s.email}</td><td>{s.enrollment_date}</td>
+                  <td><Badge status={s.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </Layout>
+  );
+}

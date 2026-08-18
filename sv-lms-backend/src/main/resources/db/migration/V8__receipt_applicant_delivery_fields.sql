@@ -1,0 +1,6 @@
+ALTER TABLE receipts
+ADD COLUMN IF NOT EXISTS admission_number VARCHAR(120),
+ADD COLUMN IF NOT EXISTS applicant_address TEXT,
+ADD COLUMN IF NOT EXISTS applicant_city VARCHAR(120),
+ADD COLUMN IF NOT EXISTS amount_in_words TEXT,
+ADD COLUMN IF NOT EXISTS sent_to_applicant_at TIMESTAMP;

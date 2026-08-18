@@ -1,0 +1,7 @@
+-- This file has been superseded. The real, active Flyway migration now lives at:
+--
+--   sv-lms-backend/src/main/resources/db/migration/V1__init.sql
+--
+-- That's the one Flyway actually runs on startup. This ops/migrations/ folder is kept
+-- as a place for future ops-level notes about migrations (e.g. manual data backfills
+-- that accompany a schema migration), not as the migration source itself.
