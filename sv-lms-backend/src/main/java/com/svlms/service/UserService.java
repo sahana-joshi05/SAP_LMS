@@ -2,10 +2,12 @@ package com.svlms.service;
 
 import com.svlms.dto.request.CreateUserRequest;
 import com.svlms.dto.response.UserResponse;
+import com.svlms.entity.Student;
 import com.svlms.entity.User;
 import com.svlms.exception.BadRequestException;
 import com.svlms.exception.ConflictException;
 import com.svlms.exception.ForbiddenException;
+import com.svlms.repository.StudentRepository;
 import com.svlms.repository.UserRepository;
 import com.svlms.security.AuthPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,10 +19,12 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, StudentRepository studentRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.studentRepository = studentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -37,10 +41,11 @@ public class UserService {
             throw new BadRequestException("Invalid role");
         }
 
-        // Admin has limited administrative access: it can create operational staff
-        // accounts but not Super Admin or other Admin accounts - only Super Admin can.
-        if ("ADMIN".equals(requester.getRole()) && (role == User.Role.SUPERADMIN || role == User.Role.ADMIN)) {
-            throw new ForbiddenException("Admin cannot create Super Admin or Admin accounts");
+        // Admin has limited administrative access: it can create staff accounts only.
+        // Super Admin is the credential owner for all roles, including Admin and Student.
+        if ("ADMIN".equals(requester.getRole())
+                && (role == User.Role.SUPERADMIN || role == User.Role.ADMIN || role == User.Role.STUDENT)) {
+            throw new ForbiddenException("Admin cannot create Super Admin, Admin, or Student accounts");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -54,6 +59,12 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
         userRepository.save(user);
+
+        if (role == User.Role.STUDENT) {
+            Student student = new Student();
+            student.setUser(user);
+            studentRepository.save(student);
+        }
 
         return toResponse(user);
     }

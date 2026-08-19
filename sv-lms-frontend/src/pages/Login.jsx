@@ -73,7 +73,7 @@ export default function Login() {
           operations@sapinstitute.com<br />
           seo@sapinstitute.com<br />
           trainer@sapinstitute.com<br />
-          <em>Students are created by converting a Lead.</em>
+          <em>Students can be created by Super Admin or by converting a Lead.</em>
         </div>
       </div>
     </div>

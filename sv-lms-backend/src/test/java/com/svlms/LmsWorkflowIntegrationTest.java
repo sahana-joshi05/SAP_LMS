@@ -279,12 +279,47 @@ class LmsWorkflowIntegrationTest {
                                 "password", DEMO_PASSWORD, "role", "superadmin"))))
                 .andExpect(status().isForbidden());
 
+        // Admin CANNOT create Student credentials directly; Super Admin owns that flow.
+        mockMvc.perform(post("/api/users")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "Student Should Fail", "email", "studentfail@example.com",
+                                "password", DEMO_PASSWORD, "role", "student"))))
+                .andExpect(status().isForbidden());
+
         // Admin CAN add a course
         mockMvc.perform(post("/api/courses")
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("name", "SAP MM"))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void superAdmin_canCreateCredentialsForEveryNonSuperAdminRole() throws Exception {
+        String superAdminToken = loginAndGetToken("superadmin@sapinstitute.com", DEMO_PASSWORD);
+
+        for (String role : java.util.List.of("admin", "counselor", "operations", "seo", "trainer", "student")) {
+            String email = "created-" + role + "@example.com";
+            mockMvc.perform(post("/api/users")
+                            .header("Authorization", bearer(superAdminToken))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "name", "Created " + role,
+                                    "email", email,
+                                    "password", DEMO_PASSWORD,
+                                    "role", role))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.role").value(role));
+
+            assertThat(loginAndGetToken(email, DEMO_PASSWORD)).isNotBlank();
+        }
+
+        String operationsToken = loginAndGetToken("operations@sapinstitute.com", DEMO_PASSWORD);
+        mockMvc.perform(get("/api/students").header("Authorization", bearer(operationsToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.email=='created-student@example.com')]").exists());
     }
 
     @Autowired
