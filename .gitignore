@@ -1,0 +1,22 @@
+# Maven build output
+**/target/
+
+# Local database files
+**/data/
+*.mv.db
+*.trace.db
+
+# Runtime/log files
+*.log
+
+# Local Spring configuration
+**/application-local.properties
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
