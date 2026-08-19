@@ -95,21 +95,28 @@ compile, paste me the error and I'll fix it immediately.
 
 ## How to run it
 
-### 1. Start PostgreSQL
-```bash
-docker compose up -d
-```
-
-### 2. Run the backend
+### 1. Run the backend
 ```bash
 cd sv-lms-backend
 mvn spring-boot:run
 ```
+By default, local development uses a lightweight in-memory H2 database, so
+Docker/PostgreSQL is not required. The demo data is recreated whenever the backend starts.
+
+If you want to use PostgreSQL instead, start it with Docker:
+
+```bash
+docker compose up -d
+```
+
+Then run the backend with a PostgreSQL profile or matching `DB_URL`, `DB_USERNAME`,
+and `DB_PASSWORD` environment variables.
+
 Creates all tables automatically, seeds demo accounts (Super Admin, Admin, Counselor,
 Operations, SEO, Instructor — password `Password@123` for all), plus a demo SAP FICO course and
 batch. API runs on `http://localhost:8080`.
 
-### 3. Run the frontend
+### 2. Run the frontend
 ```bash
 cd sv-lms-frontend
 npm install

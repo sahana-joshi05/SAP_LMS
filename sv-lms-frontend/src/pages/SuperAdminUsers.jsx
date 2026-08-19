@@ -6,13 +6,15 @@ import Badge from '../components/Badge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api.js';
 
-const ROLES = ['counselor', 'operations', 'seo', 'trainer', 'admin', 'superadmin'];
+const SUPERADMIN_ROLES = ['admin', 'counselor', 'operations', 'seo', 'trainer', 'student'];
+const ADMIN_ROLES = ['counselor', 'operations', 'seo', 'trainer'];
 
 export default function SuperAdminUsers() {
   const { auth } = useAuth();
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'counselor' });
   const [msg, setMsg] = useState(null);
+  const roleOptions = auth.user.role === 'superadmin' ? SUPERADMIN_ROLES : ADMIN_ROLES;
 
   const load = () => api.listUsers(auth.token).then(setUsers).catch((e) => setMsg({ type: 'error', text: e.message }));
 
@@ -35,7 +37,7 @@ export default function SuperAdminUsers() {
 
   return (
     <Layout>
-      <PageHeader title="Users" subtitle="Create role-based accounts for Admin, Counselor, Operations, SEO, Instructor, or Super Admin" />
+      <PageHeader title="Users" subtitle="Create login credentials for Admin, Counselor, Operations, SEO, Instructor, and Student roles" />
       {msg && <div className={`msg ${msg.type}`}>{msg.text}</div>}
 
       <div className="card">
@@ -48,7 +50,7 @@ export default function SuperAdminUsers() {
           <div className="field">
             <label>Role</label>
             <select name="role" value={form.role} onChange={handleChange}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              {roleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <button className="btn" type="submit">Create user</button>
