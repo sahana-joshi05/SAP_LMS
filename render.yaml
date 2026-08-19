@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: sv-lms
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: default
+      - key: DB_URL
+        fromDatabase:
+          name: sv-lms-db
+          property: connectionString
+      - key: DB_USERNAME
+        fromDatabase:
+          name: sv-lms-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: sv-lms-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_BASE_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGIN
+        value: "*"
+
+databases:
+  - name: sv-lms-db
+    plan: free
