@@ -65,16 +65,6 @@ export default function Login() {
         <Link to="/forgot-password" style={{ display: 'block', marginTop: 14, fontSize: 12.5, color: 'var(--muted)', textAlign: 'center', textDecoration: 'none' }}>
           Forgot password?
         </Link>
-        <div className="demo-hint">
-          <strong>Demo accounts</strong> (password: <code>Password@123</code>)<br />
-          superadmin@sapinstitute.com<br />
-          admin@sapinstitute.com<br />
-          counselor@sapinstitute.com<br />
-          operations@sapinstitute.com<br />
-          seo@sapinstitute.com<br />
-          trainer@sapinstitute.com<br />
-          <em>Students can be created by Super Admin or by converting a Lead.</em>
-        </div>
       </div>
     </div>
   );
