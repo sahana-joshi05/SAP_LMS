@@ -11,4 +11,8 @@ package com.svlms.service.email;
  */
 public interface EmailService {
     void send(String toEmail, String subject, String body);
+
+    default void sendHtml(String toEmail, String subject, String htmlBody, String textFallback) {
+        send(toEmail, subject, textFallback);
+    }
 }

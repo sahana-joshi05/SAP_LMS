@@ -11,6 +11,7 @@
 
 # Local Spring configuration
 **/application-local.properties
+**/.env
 
 # IDE files
 .idea/

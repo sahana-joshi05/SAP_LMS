@@ -8,6 +8,7 @@ public class SpaController {
 
     @GetMapping(value = {
             "/login",
+            "/enquiry",
             "/forgot-password",
             "/reset-password",
             "/superadmin",

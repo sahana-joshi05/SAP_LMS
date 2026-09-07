@@ -9,6 +9,11 @@ public class LeadResponse {
     private String status;
     private String notes;
     private String createdAt;
+    private Long assignedCounselorId;
+    private String assignedCounselorName;
+    private String assignedCounselorEmail;
+    private Long courseInterestedId;
+    private String courseInterestedName;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -26,4 +31,14 @@ public class LeadResponse {
     public void setNotes(String notes) { this.notes = notes; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    public Long getAssignedCounselorId() { return assignedCounselorId; }
+    public void setAssignedCounselorId(Long assignedCounselorId) { this.assignedCounselorId = assignedCounselorId; }
+    public String getAssignedCounselorName() { return assignedCounselorName; }
+    public void setAssignedCounselorName(String assignedCounselorName) { this.assignedCounselorName = assignedCounselorName; }
+    public String getAssignedCounselorEmail() { return assignedCounselorEmail; }
+    public void setAssignedCounselorEmail(String assignedCounselorEmail) { this.assignedCounselorEmail = assignedCounselorEmail; }
+    public Long getCourseInterestedId() { return courseInterestedId; }
+    public void setCourseInterestedId(Long courseInterestedId) { this.courseInterestedId = courseInterestedId; }
+    public String getCourseInterestedName() { return courseInterestedName; }
+    public void setCourseInterestedName(String courseInterestedName) { this.courseInterestedName = courseInterestedName; }
 }

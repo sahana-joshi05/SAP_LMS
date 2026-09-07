@@ -25,15 +25,19 @@ export const api = {
   // Users
   createUser: (token, payload) => request('/users', { method: 'POST', body: payload, token }),
   listUsers: (token, role) => request(`/users${role ? `?role=${role}` : ''}`, { token }),
+  updateUser: (token, id, payload) => request(`/users/${id}`, { method: 'PUT', body: payload, token }),
+  deleteUser: (token, id) => request(`/users/${id}`, { method: 'DELETE', token }),
 
   // Courses
   createCourse: (token, payload) => request('/courses', { method: 'POST', body: payload, token }),
   listCourses: (token) => request('/courses', { token }),
 
   // Leads
+  createPublicLead: (payload) => request('/leads/public', { method: 'POST', body: payload }),
   createLead: (token, payload) => request('/leads', { method: 'POST', body: payload, token }),
   listLeads: (token) => request('/leads', { token }),
   updateLead: (token, id, payload) => request(`/leads/${id}`, { method: 'PATCH', body: payload, token }),
+  assignLeadToMe: (token, id) => request(`/leads/${id}/assign-to-me`, { method: 'POST', token }),
   convertLead: (token, id, payload) => request(`/leads/${id}/convert`, { method: 'POST', body: payload, token }),
 
   // Batches

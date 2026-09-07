@@ -12,6 +12,7 @@ const MENUS = {
   superadmin: [
     { to: '/superadmin', label: 'Dashboard', end: true, icon: LayoutDashboard },
     { to: '/superadmin/users', label: 'Users', icon: Users },
+    { to: '/superadmin/leads', label: 'All Leads', icon: UserPlus },
     { to: '/superadmin/courses', label: 'Courses', icon: BookOpen },
     { to: '/superadmin/batches', label: 'Batches & Students', icon: Layers },
     { to: '/superadmin/reports', label: 'Reports & Audit', icon: BarChart3 },

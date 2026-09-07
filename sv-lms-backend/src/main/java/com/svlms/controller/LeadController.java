@@ -29,6 +29,11 @@ public class LeadController {
         return leadService.create(request, principal);
     }
 
+    @PostMapping("/public")
+    public LeadResponse createPublic(@RequestBody CreateLeadRequest request) {
+        return leadService.createPublic(request);
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyRole('COUNSELOR','SUPERADMIN','OPERATIONS','SEO')")
     public List<LeadResponse> list(@AuthenticationPrincipal AuthPrincipal principal) {
@@ -40,6 +45,12 @@ public class LeadController {
     public LeadResponse updateStatus(@PathVariable Long id, @RequestBody UpdateLeadRequest request,
                                       @AuthenticationPrincipal AuthPrincipal principal) {
         return leadService.updateStatus(id, request, principal);
+    }
+
+    @PostMapping("/{id}/assign-to-me")
+    @PreAuthorize("hasRole('COUNSELOR')")
+    public LeadResponse assignToMe(@PathVariable Long id, @AuthenticationPrincipal AuthPrincipal principal) {
+        return leadService.assignToMe(id, principal);
     }
 
     @PostMapping("/{id}/convert")

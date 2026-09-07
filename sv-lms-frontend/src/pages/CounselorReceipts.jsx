@@ -32,7 +32,7 @@ export default function CounselorReceipts() {
           <div className="empty-state">No receipts generated yet.</div>
         ) : (
           <table>
-            <thead><tr><th>Admission No</th><th>Receipt No</th><th>Date</th><th>Name</th><th>Course</th><th>Course Fees</th><th>Paid</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Admission No</th><th>Receipt No</th><th>Date</th><th>Name</th><th>Course</th><th>Fees</th><th>Paid</th><th>Remaining</th><th>Transaction ID</th><th>Counselor</th><th>Actions</th></tr></thead>
             <tbody>
               {receipts.map((r) => (
                 <tr key={r.id}>
@@ -43,6 +43,9 @@ export default function CounselorReceipts() {
                   <td>{r.course_name}</td>
                   <td className="num-cell">{r.total_amount}</td>
                   <td className="num-cell">{r.amount_paid}</td>
+                  <td className="num-cell">{r.balance_amount}</td>
+                  <td>{r.transaction_id || '-'}</td>
+                  <td>{r.issued_by_name || '-'}</td>
                   <td>
                     <div className="action-icons">
                       <button title="Print receipt" onClick={() => openReceipt(r.id)}><Printer /></button>

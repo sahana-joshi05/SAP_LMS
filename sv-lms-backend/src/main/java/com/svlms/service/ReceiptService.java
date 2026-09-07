@@ -96,7 +96,7 @@ public class ReceiptService {
         receipt.setPaymentMode(request.getPaymentMode());
         receipt.setTransactionId(request.getTransactionId());
         receipt.setBankName(request.getBankName());
-        receipt.setAdmissionNumber(String.valueOf(student.getId()));
+        receipt.setAdmissionNumber(generateAdmissionNumber(student));
         receipt.setApplicantAddress(firstNonBlank(request.getApplicantAddress(), lead.getNotes()));
         receipt.setApplicantCity(request.getApplicantCity());
         receipt.setAmountInWords(toRupeesWords(receipt.getAmountPaid()));
@@ -182,9 +182,10 @@ public class ReceiptService {
     private void sendReceiptToApplicant(Receipt receipt) {
         String toEmail = receipt.getStudent().getUser().getEmail();
         if (toEmail == null || toEmail.isBlank()) return;
-        emailService.send(
+        emailService.sendHtml(
                 toEmail,
                 "SV Curiotech Admission Receipt - " + receipt.getReceiptNumber(),
+                buildReceiptHtml(receipt),
                 buildPlainTextReceipt(receipt)
         );
         receipt.setSentToApplicantAt(LocalDateTime.now());
@@ -203,20 +204,36 @@ public class ReceiptService {
                 Purpose OF Payment: %s
                 Address: %s
                 City: %s
+                State: %s
+                Country: %s
                 Mobile No: %s
                 Email ID: %s
+                Date of Birth: %s
+                Gender: %s
+
+                Education Details
+                Degree: %s
+                Passed Year: %s
+                Marks: %s
+                University: %s
+                Notes: %s
 
                 Fees Details
                 Course Fees: %.2f
                 Paid Fees: %.2f
-                Balance Fees: %.2f
+                Remaining Amount To Be Paid: %.2f
+                Due Date: %s
+                Fee Notes: %s
 
                 Bank Details
                 Payment Mode: %s
                 Transaction ID: %s
                 Bank Name: %s
 
-                Amount Received By:
+                Admission Confirmed By Counselor:
+                %s
+
+                Document Details:
                 %s
                 """.formatted(
                 formatDate(r.getIssuedDate()),
@@ -227,15 +244,27 @@ public class ReceiptService {
                 safe(r.getPurpose()),
                 safe(r.getApplicantAddress()),
                 safe(r.getApplicantCity()),
+                safe(student(r).getState()),
+                safe(student(r).getCountry()),
                 safe(r.getStudent().getUser().getPhone()),
                 safe(r.getStudent().getUser().getEmail()),
+                safe(student(r).getDateOfBirth()),
+                safe(student(r).getGender()),
+                safe(student(r).getDegree()),
+                safe(student(r).getPassedYear()),
+                safe(student(r).getMarks()),
+                safe(student(r).getUniversity()),
+                safe(student(r).getEducationalDetails()),
                 n(r.getTotalAmount()),
                 n(r.getAmountPaid()),
                 n(r.getBalanceAmount()),
+                safe(student(r).getFeeDueDate()),
+                safe(student(r).getFeeDetails()),
                 safe(r.getPaymentMode()),
                 safe(r.getTransactionId()),
                 safe(r.getBankName()),
-                safe(r.getIssuedBy().getName())
+                safe(r.getIssuedBy().getName()),
+                safe(student(r).getDocumentDetails())
         );
     }
 
@@ -247,32 +276,82 @@ public class ReceiptService {
               <meta charset="utf-8" />
               <title>%s</title>
               <style>
-                body { font-family: Arial, sans-serif; color: #111827; margin: 0; padding: 28px; }
-                .receipt { max-width: 760px; margin: 0 auto; border: 1px solid #d1d5db; padding: 30px 36px; }
-                .top { text-align: right; margin-bottom: 18px; }
-                h1 { text-align: center; font-size: 20px; margin: 0 0 20px; }
-                .row { display: grid; grid-template-columns: 210px 1fr; gap: 14px; margin: 8px 0; font-size: 14px; }
-                .label { font-weight: 700; }
-                h2 { font-size: 16px; margin: 24px 0 10px; }
-                .footer { margin-top: 34px; display: grid; grid-template-columns: 1fr 220px; }
-                .name { margin-top: 24px; font-weight: 700; }
-                @media print { body { padding: 0; } .receipt { border: none; } }
+                body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; padding: 24px; background: #f8fafc; }
+                .receipt { max-width: 820px; margin: 0 auto; background: white; border: 1px solid #cbd5e1; padding: 26px 30px; }
+                .brand { text-align: center; border-bottom: 2px solid #1d4ed8; padding-bottom: 14px; margin-bottom: 18px; }
+                .brand h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .04em; }
+                .brand p { margin: 0; font-size: 12px; color: #475569; }
+                .title-row { display: flex; justify-content: space-between; align-items: center; margin: 16px 0; gap: 12px; }
+                .title-row h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
+                .stamp { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; padding: 7px 10px; font-weight: 700; font-size: 12px; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #e2e8f0; border-bottom: none; }
+                .cell { padding: 9px 11px; border-bottom: 1px solid #e2e8f0; min-height: 40px; }
+                .cell:nth-child(odd) { border-right: 1px solid #e2e8f0; }
+                .label { display: block; font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+                .value { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+                .section { margin-top: 18px; }
+                .section h3 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; color: #1e293b; }
+                table { width: 100%%; border-collapse: collapse; font-size: 13px; }
+                th, td { border: 1px solid #e2e8f0; padding: 9px 10px; text-align: left; }
+                th { background: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 10px; }
+                .amount-due { color: #b91c1c; font-weight: 800; }
+                .note-box { border: 1px solid #e2e8f0; padding: 10px; min-height: 42px; font-size: 13px; white-space: pre-wrap; }
+                .terms { margin-top: 18px; font-size: 11px; color: #475569; line-height: 1.55; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+                .footer { margin-top: 28px; display: grid; grid-template-columns: 1fr 240px; gap: 20px; align-items: end; }
+                .signature { border-top: 1px solid #0f172a; padding-top: 7px; text-align: center; font-weight: 700; }
+                @media print { body { padding: 0; background: white; } .receipt { border: none; } }
+                @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .cell:nth-child(odd) { border-right: none; } .title-row, .footer { display: block; } }
               </style>
             </head>
             <body>
               <main class="receipt">
-                <h1>SV Curiotech Admission Receipt</h1>
-                <div class="top"><span class="label">Date:</span> %s</div>
-                %s
-                <h2>Fees Details</h2>
-                %s
-                <h2>Bank Details</h2>
-                %s
+                <div class="brand">
+                  <h1>SV CURIOTECH</h1>
+                  <p>SAP Training Institute | Admission Confirmation & Payment Receipt</p>
+                </div>
+                <div class="title-row">
+                  <h2>Admission Receipt</h2>
+                  <div class="stamp">CONFIRMED ADMISSION</div>
+                </div>
+                <div class="grid">
+                  %s
+                </div>
+                <div class="section">
+                  <h3>Educational Details</h3>
+                  <table>
+                    <thead><tr><th>Degree</th><th>Passed Year</th><th>Marks</th><th>University</th></tr></thead>
+                    <tbody><tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr></tbody>
+                  </table>
+                  <div class="note-box">%s</div>
+                </div>
+                <div class="section">
+                  <h3>Fee & Payment Details</h3>
+                  <table>
+                    <thead><tr><th>Course Fees</th><th>Amount Paid</th><th>Remaining Amount To Be Paid</th><th>Due Date</th></tr></thead>
+                    <tbody><tr><td>%s</td><td>%s</td><td class="amount-due">%s</td><td>%s</td></tr></tbody>
+                  </table>
+                  <div class="note-box">%s</div>
+                </div>
+                <div class="section">
+                  <h3>Transaction Details</h3>
+                  <table>
+                    <tbody>
+                      <tr><th>Payment Mode</th><td>%s</td><th>Transaction ID</th><td>%s</td></tr>
+                      <tr><th>Bank Name</th><td>%s</td><th>Receipt No</th><td>%s</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="section">
+                  <h3>Document Details</h3>
+                  <div class="note-box">%s</div>
+                </div>
+                <div class="terms">
+                  This receipt confirms admission based on the details provided by the student and verified by the counselor. Remaining fees, if any, must be paid on or before the due date. No refund of fees paid is allowed unless separately approved in writing by institute management.
+                </div>
                 <div class="footer">
-                  <div></div>
+                  <div><span class="label">Generated Date</span><div class="value">%s</div></div>
                   <div>
-                    <div class="label">Amount Received By:</div>
-                    <div class="name">%s</div>
+                    <div class="signature">%s<br><span class="label">Admission Confirmed By Counselor</span></div>
                   </div>
                 </div>
               </main>
@@ -280,30 +359,65 @@ public class ReceiptService {
             </html>
             """.formatted(
                 escape(r.getReceiptNumber()),
+                receiptCells(r),
+                escape(student(r).getDegree()),
+                escape(student(r).getPassedYear()),
+                escape(student(r).getMarks()),
+                escape(student(r).getUniversity()),
+                escape(student(r).getEducationalDetails()),
+                money(r.getTotalAmount()),
+                money(r.getAmountPaid()),
+                money(r.getBalanceAmount()),
+                escape(student(r).getFeeDueDate()),
+                escape(student(r).getFeeDetails()),
+                escape(r.getPaymentMode()),
+                escape(r.getTransactionId()),
+                escape(r.getBankName()),
+                escape(r.getReceiptNumber()),
+                escape(student(r).getDocumentDetails()),
                 formatDate(r.getIssuedDate()),
-                rows(
-                    "Admission NO", r.getAdmissionNumber(),
-                    "Receipt NO", r.getReceiptNumber(),
-                    "Amount Received From", r.getStudent().getUser().getName(),
-                    "Amount In Rupees", r.getAmountInWords(),
-                    "Purpose OF Payment", r.getPurpose(),
-                    "Address", r.getApplicantAddress(),
-                    "City", r.getApplicantCity(),
-                    "Mobile No", r.getStudent().getUser().getPhone(),
-                    "Email ID", r.getStudent().getUser().getEmail()
-                ),
-                rows(
-                    "Course Fees", money(r.getTotalAmount()),
-                    "Paid Fees", money(r.getAmountPaid()),
-                    "Balance Fees", money(r.getBalanceAmount())
-                ),
-                rows(
-                    "Payment Mode", r.getPaymentMode(),
-                    "Transaction ID", r.getTransactionId(),
-                    "Bank Name", r.getBankName()
-                ),
                 escape(r.getIssuedBy().getName())
         );
+    }
+
+    private String receiptCells(Receipt r) {
+        return cells(
+                "Admission ID", r.getAdmissionNumber(),
+                "Receipt No", r.getReceiptNumber(),
+                "Name Of Candidate", r.getStudent().getUser().getName(),
+                "Admission For", r.getPurpose(),
+                "Date Of Birth", student(r).getDateOfBirth(),
+                "Gender", student(r).getGender(),
+                "Email ID", r.getStudent().getUser().getEmail(),
+                "Mobile No", r.getStudent().getUser().getPhone(),
+                "Address", r.getApplicantAddress(),
+                "City", r.getApplicantCity(),
+                "State", student(r).getState(),
+                "Country", student(r).getCountry(),
+                "Amount In Words", r.getAmountInWords(),
+                "Counselor", r.getIssuedBy().getName()
+        );
+    }
+
+    private String cells(String... values) {
+        StringBuilder html = new StringBuilder();
+        for (int i = 0; i < values.length; i += 2) {
+            html.append("<div class=\"cell\"><span class=\"label\">")
+                    .append(escape(values[i]))
+                    .append("</span><div class=\"value\">")
+                    .append(escape(values[i + 1]))
+                    .append("</div></div>");
+        }
+        return html.toString();
+    }
+
+    private String generateAdmissionNumber(Student student) {
+        String month = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM")).toUpperCase();
+        return String.format("SV/%s/%05d", month, student.getId());
+    }
+
+    private Student student(Receipt receipt) {
+        return receipt.getStudent();
     }
 
     private ReceiptResponse toResponse(Receipt receipt) {

@@ -2,6 +2,7 @@ package com.svlms.service.email;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
  * everything depends on the EmailService interface, not this class directly.
  */
 @Service
+@ConditionalOnProperty(name = "app.email.smtp.enabled", havingValue = "false", matchIfMissing = true)
 public class ConsoleEmailService implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(ConsoleEmailService.class);
@@ -26,6 +28,17 @@ public class ConsoleEmailService implements EmailService {
         log.info(" To:      {}", toEmail);
         log.info(" Subject: {}", subject);
         log.info(" Body:    {}", body);
+        log.info("=================================================================");
+    }
+
+    @Override
+    public void sendHtml(String toEmail, String subject, String htmlBody, String textFallback) {
+        log.info("=================================================================");
+        log.info(" [DEV HTML EMAIL - not actually sent]");
+        log.info(" To:      {}", toEmail);
+        log.info(" Subject: {}", subject);
+        log.info(" Text:    {}", textFallback);
+        log.info(" HTML:    {}", htmlBody);
         log.info("=================================================================");
     }
 }

@@ -33,4 +33,17 @@ public class UserController {
     public List<UserResponse> list(@RequestParam(required = false) String role) {
         return userService.list(role);
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','ADMIN')")
+    public UserResponse update(@PathVariable Long id, @RequestBody CreateUserRequest request,
+                               @AuthenticationPrincipal AuthPrincipal principal) {
+        return userService.update(id, request, principal);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','ADMIN')")
+    public void delete(@PathVariable Long id, @AuthenticationPrincipal AuthPrincipal principal) {
+        userService.delete(id, principal);
+    }
 }

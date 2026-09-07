@@ -3,12 +3,14 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 
 import Login from './pages/Login.jsx';
+import PublicEnquiry from './pages/PublicEnquiry.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import SuperAdminDashboard from './pages/SuperAdminDashboard.jsx';
 import SuperAdminUsers from './pages/SuperAdminUsers.jsx';
 import SuperAdminCourses from './pages/SuperAdminCourses.jsx';
 import SuperAdminBatches from './pages/SuperAdminBatches.jsx';
+import SuperAdminLeads from './pages/SuperAdminLeads.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import CounselorDashboard from './pages/CounselorDashboard.jsx';
 import CounselorLeads from './pages/CounselorLeads.jsx';
@@ -41,12 +43,14 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/enquiry" element={<PublicEnquiry />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Super Admin */}
       <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminDashboard /></ProtectedRoute>} />
       <Route path="/superadmin/users" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminUsers /></ProtectedRoute>} />
+      <Route path="/superadmin/leads" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminLeads /></ProtectedRoute>} />
       <Route path="/superadmin/courses" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminCourses /></ProtectedRoute>} />
       <Route path="/superadmin/batches" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminBatches /></ProtectedRoute>} />
       <Route path="/superadmin/reports" element={<ProtectedRoute allowedRoles={['superadmin']}><AdminReports /></ProtectedRoute>} />

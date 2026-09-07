@@ -68,15 +68,62 @@ public class LeadService {
         return toResponse(lead);
     }
 
+    public LeadResponse createPublic(CreateLeadRequest request) {
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new BadRequestException("Lead name is required");
+        }
+        if ((request.getPhone() == null || request.getPhone().isBlank())
+                && (request.getEmail() == null || request.getEmail().isBlank())) {
+            throw new BadRequestException("Phone or email is required");
+        }
+
+        Lead lead = new Lead();
+        lead.setName(request.getName());
+        lead.setPhone(request.getPhone());
+        lead.setEmail(request.getEmail());
+        lead.setSource(request.getSource() != null ? request.getSource() : "website");
+        lead.setNotes(request.getNotes());
+
+        if (request.getCourseInterested() != null) {
+            courseRepository.findById(request.getCourseInterested()).ifPresent(lead::setCourseInterested);
+        }
+
+        leadRepository.save(lead);
+        return toResponse(lead);
+    }
+
     public List<LeadResponse> list(AuthPrincipal principal) {
         List<Lead> leads;
         if ("COUNSELOR".equals(principal.getRole())) {
             User counselor = userRepository.findById(principal.getId()).orElseThrow();
-            leads = leadRepository.findByAssignedCounselorOrderByCreatedAtDesc(counselor);
+            leads = leadRepository.findVisibleToCounselor(counselor);
         } else {
             leads = leadRepository.findAllByOrderByCreatedAtDesc();
         }
         return leads.stream().map(this::toResponse).toList();
+    }
+
+    public LeadResponse assignToMe(Long id, AuthPrincipal principal) {
+        if (!"COUNSELOR".equals(principal.getRole())) {
+            throw new ForbiddenException("Only counselors can pick leads");
+        }
+
+        Lead lead = findLeadOrThrow(id);
+        if (lead.getAssignedCounselor() != null) {
+            if (lead.getAssignedCounselor().getId().equals(principal.getId())) {
+                return toResponse(lead);
+            }
+            throw new ConflictException("This lead is already taken by another counselor");
+        }
+
+        User counselor = userRepository.findById(principal.getId()).orElseThrow();
+        lead.setAssignedCounselor(counselor);
+        if (Lead.Status.New.equals(lead.getStatus())) {
+            lead.setStatus(Lead.Status.Follow_up);
+        }
+        lead.setUpdatedAt(LocalDateTime.now());
+        leadRepository.save(lead);
+        return toResponse(lead);
     }
 
     public LeadResponse updateStatus(Long id, UpdateLeadRequest request, AuthPrincipal principal) {
@@ -119,6 +166,30 @@ public class LeadService {
         Student student = new Student();
         student.setUser(user);
         student.setLead(lead);
+        Double courseFee = lead.getCourseInterested() != null && lead.getCourseInterested().getFee() != null
+                ? lead.getCourseInterested().getFee() : 0.0;
+        Double totalAmount = request != null && request.getTotalAmount() != null ? request.getTotalAmount() : courseFee;
+        Double amountPaid = request != null && request.getAmountPaid() != null ? request.getAmountPaid() : 0.0;
+        if (amountPaid > totalAmount) {
+            throw new BadRequestException("Paid amount cannot be greater than total fee");
+        }
+        Double remainingAmount = request != null && request.getRemainingPaymentAmount() != null
+                ? request.getRemainingPaymentAmount() : Math.max(totalAmount - amountPaid, 0.0);
+        student.setPersonalDetails(request != null ? request.getPersonalDetails() : null);
+        student.setDateOfBirth(request != null ? request.getDateOfBirth() : null);
+        student.setGender(request != null ? request.getGender() : null);
+        student.setState(request != null ? request.getState() : null);
+        student.setCountry(request != null ? request.getCountry() : null);
+        student.setEducationalDetails(request != null ? request.getEducationalDetails() : null);
+        student.setDegree(request != null ? request.getDegree() : null);
+        student.setPassedYear(request != null ? request.getPassedYear() : null);
+        student.setMarks(request != null ? request.getMarks() : null);
+        student.setUniversity(request != null ? request.getUniversity() : null);
+        student.setFeeDetails(request != null ? request.getFeeDetails() : null);
+        student.setTransactionId(request != null ? request.getTransactionId() : null);
+        student.setRemainingPaymentAmount(remainingAmount);
+        student.setFeeDueDate(request != null ? request.getFeeDueDate() : null);
+        student.setDocumentDetails(request != null ? request.getDocumentDetails() : null);
         studentRepository.save(student);
 
         lead.setStatus(Lead.Status.Enrolled);
@@ -128,10 +199,6 @@ public class LeadService {
         // Generate and send admission receipt when lead is converted to student
         try {
             if (lead.getCourseInterested() != null) {
-                Double totalFee = lead.getCourseInterested().getFee() != null 
-                    ? lead.getCourseInterested().getFee() : 0.0;
-                Double totalAmount = request != null && request.getTotalAmount() != null ? request.getTotalAmount() : totalFee;
-                Double amountPaid = request != null && request.getAmountPaid() != null ? request.getAmountPaid() : 0.0;
                 receipt = receiptService.createReceiptForAdmission(
                     lead.getId(),
                     lead.getCourseInterested().getId(),
@@ -179,6 +246,15 @@ public class LeadService {
         dto.setStatus(l.getStatus().name());
         dto.setNotes(l.getNotes());
         dto.setCreatedAt(l.getCreatedAt().toString());
+        if (l.getAssignedCounselor() != null) {
+            dto.setAssignedCounselorId(l.getAssignedCounselor().getId());
+            dto.setAssignedCounselorName(l.getAssignedCounselor().getName());
+            dto.setAssignedCounselorEmail(l.getAssignedCounselor().getEmail());
+        }
+        if (l.getCourseInterested() != null) {
+            dto.setCourseInterestedId(l.getCourseInterested().getId());
+            dto.setCourseInterestedName(l.getCourseInterested().getName());
+        }
         return dto;
     }
 }

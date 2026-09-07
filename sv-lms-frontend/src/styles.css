@@ -318,6 +318,89 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
 }
 .field textarea { min-width: 260px; font-family: var(--font-body); }
 
+.admission-form {
+  align-items: stretch;
+}
+.admission-form .field {
+  flex: 1 1 220px;
+}
+.admission-form .wide-field {
+  flex-basis: 420px;
+}
+.form-section-title {
+  flex: 1 0 100%;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+.form-section-title:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.admission-form .field input,
+.admission-form .field select,
+.admission-form .field textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.password-input-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 160px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+}
+.password-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.password-input-wrap input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  background: transparent;
+}
+.password-input-wrap input:focus {
+  box-shadow: none;
+}
+.password-eye-btn,
+.icon-edit-btn,
+.icon-view-btn,
+.icon-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.password-eye-btn {
+  width: 36px;
+  height: 36px;
+  margin-right: 4px;
+  border-radius: 7px;
+  color: var(--muted);
+}
+.password-eye-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.password-eye-btn svg,
+.icon-edit-btn svg,
+.icon-view-btn svg,
+.icon-danger-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 button.btn {
   background: var(--accent); color: white; border: none; padding: 10px 18px;
   border-radius: var(--radius-sm); cursor: pointer; font-size: 13.5px; font-weight: 600;
@@ -328,6 +411,46 @@ button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 button.btn.secondary { background: var(--accent-bg); color: var(--accent); }
 button.btn.secondary:hover { filter: brightness(0.97); }
 button.btn.small { padding: 6px 12px; font-size: 12px; }
+button.btn svg { width: 16px; height: 16px; vertical-align: middle; }
+
+.icon-edit-btn,
+.icon-view-btn,
+.icon-danger-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  color: var(--danger);
+}
+.icon-edit-btn {
+  margin-right: 6px;
+  border-radius: 7px;
+  color: var(--accent);
+}
+.icon-view-btn {
+  border-radius: 7px;
+  color: var(--blue);
+}
+.icon-edit-btn:hover {
+  background: var(--accent-bg);
+}
+.icon-view-btn:hover {
+  background: var(--blue-bg);
+}
+.icon-danger-btn:hover {
+  background: var(--danger-bg);
+}
+.icon-edit-btn:disabled,
+.icon-view-btn:disabled,
+.icon-danger-btn:disabled {
+  color: var(--muted-light);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.icon-edit-btn:disabled:hover,
+.icon-view-btn:disabled:hover,
+.icon-danger-btn:disabled:hover {
+  background: transparent;
+}
 
 /* ============ MESSAGES ============ */
 .msg { padding: 11px 15px; border-radius: var(--radius-sm); font-size: 13.5px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -491,3 +614,141 @@ button.btn.small { padding: 6px 12px; font-size: 12px; }
   cursor: pointer;
 }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+.lead-view-modal {
+  width: min(620px, 100%);
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.detail-grid div {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.detail-grid span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.detail-grid strong {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.detail-grid .detail-full {
+  grid-column: 1 / -1;
+}
+
+.public-lead-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
+  background: #f7f8fa;
+}
+.public-lead-panel {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 44px;
+  color: white;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.18), transparent 25%),
+    linear-gradient(140deg, #14213d 0%, #0d9488 100%);
+}
+.public-lead-logo {
+  width: 150px;
+  height: auto;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.94);
+}
+.public-lead-kicker {
+  margin: 0 0 14px;
+  color: rgba(255,255,255,0.74);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.public-lead-panel h1 {
+  margin: 0;
+  max-width: 520px;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4vw, 54px);
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+.public-lead-copy {
+  max-width: 480px;
+  margin: 18px 0 0;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.7;
+}
+.public-lead-card {
+  width: min(520px, calc(100% - 40px));
+  align-self: center;
+  justify-self: center;
+  padding: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  box-shadow: var(--shadow-md);
+}
+.public-lead-card h2 {
+  margin: 0 0 22px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+.public-lead-card h2 svg {
+  color: var(--accent);
+}
+.public-lead-card .field {
+  margin-bottom: 16px;
+}
+.public-lead-card .field input,
+.public-lead-card .field select,
+.public-lead-card .field textarea {
+  width: 100%;
+}
+.public-lead-submit {
+  width: 100%;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 620px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .public-lead-page {
+    grid-template-columns: 1fr;
+  }
+  .public-lead-panel {
+    min-height: auto;
+    padding: 30px 22px;
+    gap: 48px;
+  }
+  .public-lead-card {
+    margin: 26px 0;
+  }
+}

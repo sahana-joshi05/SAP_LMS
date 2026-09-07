@@ -36,13 +36,14 @@ export default function CounselorFollowUps() {
   }, {}), [followUps]);
 
   const rows = leads.filter((lead) => {
+    const belongsToCounselor = String(lead.assigned_counselor_id || '') === String(auth.user.id);
     const q = search.trim().toLowerCase();
     const matchesSearch = !q || [lead.name, lead.phone, lead.email, lead.status, `AT${lead.id}`].some((v) => (v || '').toLowerCase().includes(q));
     const matchesType = !typeFilter || lead.status === typeFilter;
     const date = (lead.created_at || '').slice(0, 10);
     const matchesFrom = !fromDate || !date || date >= fromDate;
     const matchesTo = !toDate || !date || date <= toDate;
-    return matchesSearch && matchesType && matchesFrom && matchesTo;
+    return belongsToCounselor && matchesSearch && matchesType && matchesFrom && matchesTo;
   });
 
   const expandAll = () => setExpanded(Object.fromEntries(rows.map((lead) => [lead.id, true])));
