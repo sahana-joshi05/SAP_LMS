@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Bell, UserPlus, CheckCircle2, KeyRound } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Bell, ChevronDown, ChevronUp, Download, Eye, Mail, Pencil, PlusCircle, Trash2, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import Badge from '../components/Badge.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -22,37 +23,27 @@ const STATUSES = [
   'Lost',
 ];
 
+const SOURCES = ['manual', 'website', 'referral', 'walk-in', 'webchat', 'whatsapp', 'WEB'];
+
 export default function CounselorLeads() {
   const { auth } = useAuth();
+  const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
   const [leads, setLeads] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', source: 'manual', course_interested: '', notes: '' });
-  const [receiptForm, setReceiptForm] = useState({
-    total_amount: '',
-    amount_paid: '',
-    payment_mode: 'Online',
-    transaction_id: '',
-    bank_name: '',
-    applicant_address: '',
-    applicant_city: '',
-    personal_details: '',
-    date_of_birth: '',
-    gender: '',
-    state: '',
-    country: 'India',
-    educational_details: '',
-    degree: '',
-    passed_year: '',
-    marks: '',
-    university: '',
-    fee_details: '',
-    fee_due_date: '',
-    document_details: '',
-  });
+  const [rowsPerPage, setRowsPerPage] = useState('10');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState(today);
+  const [search, setSearch] = useState('');
   const [msg, setMsg] = useState(null);
-  const [convertResult, setConvertResult] = useState(null);
   const [knownLeadIds, setKnownLeadIds] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [expanded, setExpanded] = useState({});
 
   const load = ({ notify = false } = {}) => api.listLeads(auth.token).then((items) => {
     setLeads(items);
@@ -76,6 +67,32 @@ export default function CounselorLeads() {
     return () => clearInterval(id);
   }, [auth.token, soundEnabled]);
 
+  const filteredLeads = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return leads.filter((lead) => {
+      const createdDate = (lead.created_at || '').slice(0, 10);
+      const matchesSearch = !q || [
+        `AT${lead.id}`,
+        lead.name,
+        lead.phone,
+        lead.email,
+        lead.status,
+        lead.source,
+        lead.course_interested_name,
+        lead.notes,
+      ].some((value) => (value || '').toLowerCase().includes(q));
+      const matchesStatus = statusFilter ? lead.status === statusFilter : lead.status !== 'Lost';
+      const matchesCourse = !courseFilter || String(lead.course_interested_id || '') === String(courseFilter);
+      const matchesSource = !sourceFilter || (lead.source || '').toLowerCase() === sourceFilter.toLowerCase();
+      const matchesFrom = !fromDate || !createdDate || createdDate >= fromDate;
+      const matchesTo = !toDate || !createdDate || createdDate <= toDate;
+      return matchesSearch && matchesStatus && matchesCourse && matchesSource && matchesFrom && matchesTo;
+    }).slice(0, Number(rowsPerPage));
+  }, [leads, search, statusFilter, courseFilter, sourceFilter, fromDate, toDate, rowsPerPage]);
+
+  const expandAll = () => setExpanded(Object.fromEntries(filteredLeads.map((lead) => [lead.id, true])));
+  const collapseAll = () => setExpanded({});
+
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
@@ -85,6 +102,7 @@ export default function CounselorLeads() {
       await api.createLead(auth.token, { ...form, course_interested: form.course_interested || null });
       setMsg({ type: 'success', text: `Lead "${form.name}" added.` });
       setForm({ name: '', phone: '', email: '', source: 'manual', course_interested: '', notes: '' });
+      setShowAddForm(false);
       load();
     } catch (err) {
       setMsg({ type: 'error', text: err.message });
@@ -100,196 +118,178 @@ export default function CounselorLeads() {
     }
   };
 
-  const convert = async (id) => {
-    setMsg(null);
-    setConvertResult(null);
-    try {
-      const result = await api.convertLead(auth.token, id, {
-        total_amount: receiptForm.total_amount ? Number(receiptForm.total_amount) : null,
-        amount_paid: receiptForm.amount_paid ? Number(receiptForm.amount_paid) : 0,
-        payment_mode: receiptForm.payment_mode,
-        transaction_id: receiptForm.transaction_id,
-        bank_name: receiptForm.bank_name,
-        applicant_address: receiptForm.applicant_address,
-        applicant_city: receiptForm.applicant_city,
-        personal_details: receiptForm.personal_details,
-        date_of_birth: receiptForm.date_of_birth,
-        gender: receiptForm.gender,
-        state: receiptForm.state,
-        country: receiptForm.country,
-        educational_details: receiptForm.educational_details,
-        degree: receiptForm.degree,
-        passed_year: receiptForm.passed_year,
-        marks: receiptForm.marks,
-        university: receiptForm.university,
-        fee_details: receiptForm.fee_details,
-        remaining_payment_amount: Math.max(
-          (Number(receiptForm.total_amount) || 0) - (Number(receiptForm.amount_paid) || 0),
-          0,
-        ),
-        fee_due_date: receiptForm.fee_due_date,
-        document_details: receiptForm.document_details,
-      });
-      setConvertResult(result);
-      load();
-    } catch (err) {
-      setMsg({ type: 'error', text: err.message });
-    }
-  };
-
   const pickLead = async (id) => {
     setMsg(null);
     try {
       await api.assignLeadToMe(auth.token, id);
-      setMsg({ type: 'success', text: 'Lead picked and assigned to you.' });
+      setMsg({ type: 'success', text: 'Lead transferred to your follow-up list.' });
       load();
     } catch (err) {
       setMsg({ type: 'error', text: err.message });
     }
   };
 
-  const openReceipt = async (receiptId) => {
-    const res = await fetch(`/api/receipts/${receiptId}/print`, { headers: { Authorization: `Bearer ${auth.token}` } });
-    const html = await res.text();
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank', 'noopener,noreferrer');
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  const removeLead = async (id) => {
+    await updateStatus(id, 'Lost');
+    setMsg({ type: 'success', text: 'Lead removed from the active list.' });
+  };
+
+  const exportCsv = () => {
+    const headers = ['Lead ID', 'Date', 'Course', 'Student Information', 'Email', 'Source', 'Status', 'Notes'];
+    const rows = filteredLeads.map((lead) => [
+      `AT${String(lead.id).padStart(5, '0')}`,
+      (lead.created_at || '').slice(0, 10),
+      lead.course_interested_name || '',
+      lead.name || '',
+      lead.email || '',
+      lead.source || '',
+      lead.status || '',
+      lead.notes || '',
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
+      .join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sv-lms-leads.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <Layout>
       <PageHeader
-        title="Leads"
-        subtitle="Add enquiries, track follow-ups, pick website leads, and convert leads into enrolled students"
+        title="Leads Management"
+        subtitle="Add enquiries, filter leads, transfer follow-ups, and start admissions"
         cta={<button className="btn-cta" type="button" onClick={() => { setSoundEnabled(true); playLeadNotificationSound(); }}><Bell size={16} /> {soundEnabled ? 'Lead sound on' : 'Enable lead sound'}</button>}
       />
       {msg && <div className={`msg ${msg.type}`}>{msg.text}</div>}
-      {convertResult && (
-        <div className="msg success">
-          <KeyRound size={16} />
-          Converted! Student login: <strong>{convertResult.login_email}</strong> &middot; Temp password: <strong>{convertResult.temp_password}</strong>
-          {convertResult.receipt_id && (
-            <button className="btn small secondary" type="button" onClick={() => openReceipt(convertResult.receipt_id)}>
-              Open receipt {convertResult.receipt_number}
-            </button>
-          )}
+
+      <div className="crm-filter-panel">
+        <div className="field">
+          <label>Rows</label>
+          <select value={rowsPerPage} onChange={(e) => setRowsPerPage(e.target.value)}>
+            <option value="10">10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>Select mode</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">All statuses</option>
+            {STATUSES.map((status) => <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>Select course</label>
+          <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)}>
+            <option value="">All courses</option>
+            {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>Select source</label>
+          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+            <option value="">All sources</option>
+            {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
+          </select>
+        </div>
+        <div className="field"><label>From</label><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} /></div>
+        <div className="field"><label>To</label><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} /></div>
+        <div className="field"><label>Search</label><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." /></div>
+        <button className="btn small secondary" type="button" onClick={exportCsv}><Download size={14} /> Export</button>
+        <button className="btn small" type="button" onClick={() => setShowAddForm(true)}><PlusCircle size={14} /> Add Lead</button>
+        <button className="btn small secondary" type="button" onClick={expandAll}>Expand All</button>
+        <button className="btn small secondary" type="button" onClick={collapseAll}>Collapse All</button>
+      </div>
+
+      {showAddForm && (
+        <div className="card">
+          <h3><UserPlus /> Add a new lead</h3>
+          <form className="inline-form" onSubmit={handleSubmit}>
+            <div className="field"><label>Name</label><input name="name" value={form.name} onChange={handleChange} required /></div>
+            <div className="field"><label>Phone</label><input name="phone" value={form.phone} onChange={handleChange} /></div>
+            <div className="field"><label>Email</label><input name="email" type="email" value={form.email} onChange={handleChange} placeholder="required for admission" /></div>
+            <div className="field">
+              <label>Source</label>
+              <select name="source" value={form.source} onChange={handleChange}>
+                {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Course interested</label>
+              <select name="course_interested" value={form.course_interested} onChange={handleChange}>
+                <option value="">-- select --</option>
+                {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Notes</label><textarea name="notes" value={form.notes} onChange={handleChange} rows={1} /></div>
+            <div className="form-actions">
+              <button className="btn secondary" type="button" onClick={() => setShowAddForm(false)}>Cancel</button>
+              <button className="btn" type="submit">Add lead</button>
+            </div>
+          </form>
         </div>
       )}
 
-      <div className="card">
-        <h3><UserPlus /> Add a new lead</h3>
-        <form className="inline-form" onSubmit={handleSubmit}>
-          <div className="field"><label>Name</label><input name="name" value={form.name} onChange={handleChange} required /></div>
-          <div className="field"><label>Phone</label><input name="phone" value={form.phone} onChange={handleChange} /></div>
-          <div className="field"><label>Email</label><input name="email" type="email" value={form.email} onChange={handleChange} placeholder="required to convert later" /></div>
-          <div className="field">
-            <label>Source</label>
-            <select name="source" value={form.source} onChange={handleChange}>
-              <option value="manual">Manual</option>
-              <option value="website">Website</option>
-              <option value="referral">Referral</option>
-              <option value="walk-in">Walk-in</option>
-            </select>
-          </div>
-          <div className="field">
-            <label>Course interested</label>
-            <select name="course_interested" value={form.course_interested} onChange={handleChange}>
-              <option value="">-- select --</option>
-              {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="field"><label>Notes</label><textarea name="notes" value={form.notes} onChange={handleChange} rows={1} /></div>
-          <button className="btn" type="submit">Add lead</button>
-        </form>
-      </div>
-
-      <div className="card">
-        <h3>Admission details</h3>
-        <form className="inline-form admission-form">
-          <div className="form-section-title">Personal details</div>
-          <div className="field"><label>Address</label><textarea rows={2} value={receiptForm.applicant_address} onChange={(e) => setReceiptForm({ ...receiptForm, applicant_address: e.target.value })} /></div>
-          <div className="field"><label>City</label><input value={receiptForm.applicant_city} onChange={(e) => setReceiptForm({ ...receiptForm, applicant_city: e.target.value })} /></div>
-          <div className="field"><label>State</label><input value={receiptForm.state} onChange={(e) => setReceiptForm({ ...receiptForm, state: e.target.value })} /></div>
-          <div className="field"><label>Country</label><input value={receiptForm.country} onChange={(e) => setReceiptForm({ ...receiptForm, country: e.target.value })} /></div>
-          <div className="field"><label>Date of birth</label><input type="date" value={receiptForm.date_of_birth} onChange={(e) => setReceiptForm({ ...receiptForm, date_of_birth: e.target.value })} /></div>
-          <div className="field">
-            <label>Gender</label>
-            <select value={receiptForm.gender} onChange={(e) => setReceiptForm({ ...receiptForm, gender: e.target.value })}>
-              <option value="">-- select --</option>
-              <option value="Female">Female</option>
-              <option value="Male">Male</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div className="field wide-field"><label>Personal notes</label><textarea rows={2} value={receiptForm.personal_details} onChange={(e) => setReceiptForm({ ...receiptForm, personal_details: e.target.value })} placeholder="Guardian name, alternate contact, address proof details" /></div>
-
-          <div className="form-section-title">Educational details</div>
-          <div className="field"><label>Degree</label><input value={receiptForm.degree} onChange={(e) => setReceiptForm({ ...receiptForm, degree: e.target.value })} placeholder="B.Com" /></div>
-          <div className="field"><label>Passed year</label><input value={receiptForm.passed_year} onChange={(e) => setReceiptForm({ ...receiptForm, passed_year: e.target.value })} placeholder="2024" /></div>
-          <div className="field"><label>Marks</label><input value={receiptForm.marks} onChange={(e) => setReceiptForm({ ...receiptForm, marks: e.target.value })} placeholder="80%" /></div>
-          <div className="field"><label>University</label><input value={receiptForm.university} onChange={(e) => setReceiptForm({ ...receiptForm, university: e.target.value })} /></div>
-          <div className="field wide-field"><label>Education notes</label><textarea rows={2} value={receiptForm.educational_details} onChange={(e) => setReceiptForm({ ...receiptForm, educational_details: e.target.value })} placeholder="College, specialization, certification, gap details" /></div>
-
-          <div className="form-section-title">Fee details</div>
-          <div className="field"><label>Course Fees</label><input type="number" value={receiptForm.total_amount} onChange={(e) => setReceiptForm({ ...receiptForm, total_amount: e.target.value })} placeholder="defaults to course fee" /></div>
-          <div className="field"><label>Paid Fees</label><input type="number" value={receiptForm.amount_paid} onChange={(e) => setReceiptForm({ ...receiptForm, amount_paid: e.target.value })} /></div>
-          <div className="field"><label>Remaining amount</label><input type="number" value={Math.max((Number(receiptForm.total_amount) || 0) - (Number(receiptForm.amount_paid) || 0), 0)} readOnly /></div>
-          <div className="field"><label>Due date</label><input type="date" value={receiptForm.fee_due_date} onChange={(e) => setReceiptForm({ ...receiptForm, fee_due_date: e.target.value })} /></div>
-          <div className="field wide-field"><label>Fee notes</label><textarea rows={2} value={receiptForm.fee_details} onChange={(e) => setReceiptForm({ ...receiptForm, fee_details: e.target.value })} placeholder="Installment plan, discounts, due date, scholarship notes" /></div>
-
-          <div className="form-section-title">Transaction details</div>
-          <div className="field">
-            <label>Payment Mode</label>
-            <select value={receiptForm.payment_mode} onChange={(e) => setReceiptForm({ ...receiptForm, payment_mode: e.target.value })}>
-              <option value="Online">Online</option>
-              <option value="Cash">Cash</option>
-              <option value="UPI">UPI</option>
-              <option value="Card">Card</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-            </select>
-          </div>
-          <div className="field"><label>Transaction ID</label><input value={receiptForm.transaction_id} onChange={(e) => setReceiptForm({ ...receiptForm, transaction_id: e.target.value })} /></div>
-          <div className="field"><label>Bank Name</label><input value={receiptForm.bank_name} onChange={(e) => setReceiptForm({ ...receiptForm, bank_name: e.target.value })} /></div>
-
-          <div className="form-section-title">Document details</div>
-          <div className="field wide-field"><label>Documents</label><textarea rows={2} value={receiptForm.document_details} onChange={(e) => setReceiptForm({ ...receiptForm, document_details: e.target.value })} placeholder="Aadhaar, marks cards, degree certificate, photo, pending documents" /></div>
-        </form>
-      </div>
-
-      <div className="card">
-        <h3>My leads</h3>
-        {leads.length === 0 ? (
-          <div className="empty-state">No leads yet — add your first enquiry above.</div>
-        ) : (
-          <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th>Taken by</th><th>Update status</th><th>Convert</th></tr></thead>
-            <tbody>
-              {leads.map((l) => (
-                <tr key={l.id}>
-                  <td>{l.name}</td>
-                  <td>{l.phone}</td>
-                  <td>{l.email}</td>
-                  <td><Badge status={l.status} /></td>
-                  <td>{l.assigned_counselor_name || <button className="btn small secondary" type="button" onClick={() => pickLead(l.id)}>Pick lead</button>}</td>
-                  <td>
-                    <select value={l.status} onChange={(e) => updateStatus(l.id, e.target.value)} disabled={!l.assigned_counselor_id}>
-                      {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    {l.status !== 'Enrolled' && l.assigned_counselor_id && (
-                      <button className="btn small secondary" onClick={() => convert(l.id)} disabled={!l.email}>
-                        <CheckCircle2 size={13} style={{ marginRight: 4, verticalAlign: -2 }} />
-                        Convert to Student
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <div className="card crm-table-card">
+        <table>
+          <thead><tr><th>Desk no</th><th>Date/Time</th><th>Course</th><th>Student Information</th><th>Email</th><th>Source</th><th>Actions</th></tr></thead>
+          <tbody>
+            {filteredLeads.map((lead) => {
+              const isOpen = !!expanded[lead.id];
+              return (
+                <React.Fragment key={lead.id}>
+                  <tr>
+                    <td>{lead.assigned_counselor_name || 'Unassigned'}</td>
+                    <td>{(lead.created_at || '').slice(0, 10)}</td>
+                    <td>{lead.course_interested_name || '-'}</td>
+                    <td>
+                      <div className="list-item-title">{lead.name}</div>
+                      <div className="list-item-sub">AT{String(lead.id).padStart(5, '0')} {lead.phone ? `- ${lead.phone}` : ''}</div>
+                    </td>
+                    <td>{lead.email || '-'}</td>
+                    <td>{lead.source || '-'}</td>
+                    <td>
+                      <div className="lead-action-row">
+                        <div className="action-icons">
+                          <button title={isOpen ? 'Collapse' : 'Expand'} type="button" onClick={() => setExpanded({ ...expanded, [lead.id]: !isOpen })}>{isOpen ? <ChevronUp /> : <ChevronDown />}</button>
+                          <button title="Update status" type="button" onClick={() => setExpanded({ ...expanded, [lead.id]: true })}><Pencil /></button>
+                          <button title="View details" type="button" onClick={() => setExpanded({ ...expanded, [lead.id]: true })}><Eye /></button>
+                          <a title="Email applicant" href={lead.email ? `mailto:${lead.email}` : undefined}><Mail /></a>
+                        </div>
+                        <button className="btn small secondary" type="button" onClick={() => pickLead(lead.id)}>Transfer</button>
+                        <button className="btn small danger" type="button" onClick={() => removeLead(lead.id)}><Trash2 size={13} /> Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                  {isOpen && (
+                    <tr className="expanded-row">
+                      <td colSpan="7">
+                        <div className="expanded-content">
+                          <div><strong>Status:</strong> <Badge status={lead.status} /></div>
+                          <div><strong>Phone:</strong> {lead.phone || '-'} &nbsp; <strong>Email:</strong> {lead.email || '-'}</div>
+                          <div><strong>Notes:</strong> {lead.notes || 'No notes yet.'}</div>
+                          <div className="expanded-actions">
+                            <select value={lead.status} onChange={(e) => updateStatus(lead.id, e.target.value)} disabled={!lead.assigned_counselor_id}>
+                              {STATUSES.map((status) => <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>)}
+                            </select>
+                            <button className="btn small secondary" type="button" onClick={() => updateStatus(lead.id, 'New')}>Fresh Entry</button>
+                            <a className="btn small secondary" href={lead.email ? `mailto:${lead.email}?subject=SV LMS Course Brochure` : undefined}>Brochure</a>
+                            <button className="btn small" type="button" onClick={() => navigate(`/counselor/admission?leadId=${lead.id}`)} disabled={!lead.email}>Admission</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+        {filteredLeads.length === 0 && <div className="empty-state">No leads found.</div>}
       </div>
     </Layout>
   );

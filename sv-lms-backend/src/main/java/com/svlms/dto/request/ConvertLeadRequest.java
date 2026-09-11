@@ -2,6 +2,7 @@ package com.svlms.dto.request;
 
 public class ConvertLeadRequest {
     private String password;
+    private Long courseInterested;
     private Double totalAmount;
     private Double amountPaid;
     private String paymentMode;
@@ -26,6 +27,8 @@ public class ConvertLeadRequest {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public Long getCourseInterested() { return courseInterested; }
+    public void setCourseInterested(Long courseInterested) { this.courseInterested = courseInterested; }
     public Double getTotalAmount() { return totalAmount; }
     public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
     public Double getAmountPaid() { return amountPaid; }

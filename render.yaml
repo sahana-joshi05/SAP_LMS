@@ -26,6 +26,18 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGIN
         value: "*"
+      - key: MAIL_ENABLED
+        value: "true"
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
 
 databases:
   - name: sv-lms-db

@@ -37,6 +37,9 @@ public class UserService {
     @Value("${app.frontend-base-url:http://localhost:5173}")
     private String frontendBaseUrl;
 
+    @Value("${app.email.fail-user-create-on-send-error:false}")
+    private boolean failUserCreateOnEmailError;
+
     public UserService(UserRepository userRepository, StudentRepository studentRepository,
                        PasswordResetTokenRepository passwordResetTokenRepository,
                        PasswordEncoder passwordEncoder, EmailService emailService) {
@@ -91,6 +94,9 @@ public class UserService {
         } catch (RuntimeException e) {
             log.error("User {} was created, but credential email could not be sent to {}",
                     user.getId(), user.getEmail(), e);
+            if (failUserCreateOnEmailError) {
+                throw new IllegalStateException("Credential email could not be sent. Please check mail configuration.", e);
+            }
         }
 
         return toResponse(user);

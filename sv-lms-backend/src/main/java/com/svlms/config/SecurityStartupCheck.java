@@ -24,6 +24,21 @@ public class SecurityStartupCheck {
     @Value("${cors.allowed-origin}")
     private String corsAllowedOrigin;
 
+    @Value("${app.frontend-base-url}")
+    private String frontendBaseUrl;
+
+    @Value("${app.email.smtp.enabled}")
+    private boolean smtpEmailEnabled;
+
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
+    @Value("${app.mail.from:}")
+    private String mailFrom;
+
     @PostConstruct
     public void checkSecurityConfig() {
         if (INSECURE_DEFAULT_SECRET.equals(jwtSecret)) {
@@ -36,6 +51,18 @@ public class SecurityStartupCheck {
         if (corsAllowedOrigin.contains("localhost")) {
             log.warn("NOTE: cors.allowed-origin is set to '{}'. Set CORS_ALLOWED_ORIGIN to your", corsAllowedOrigin);
             log.warn("real frontend domain before deploying to production.");
+        }
+        if (frontendBaseUrl.contains("localhost")) {
+            log.warn("NOTE: app.frontend-base-url is set to '{}'. Credential and password", frontendBaseUrl);
+            log.warn("reset emails will contain localhost links until FRONTEND_BASE_URL is set.");
+        }
+        if (smtpEmailEnabled && (mailUsername.isBlank() || mailPassword.isBlank() || mailFrom.isBlank())) {
+            throw new IllegalStateException(
+                    "SMTP email is enabled, but MAIL_USERNAME, MAIL_PASSWORD, and MAIL_FROM must all be set.");
+        }
+        if (!smtpEmailEnabled) {
+            log.warn("NOTE: SMTP email is disabled. User credentials and password reset emails will be logged only.");
+            log.warn("Set MAIL_ENABLED=true plus MAIL_USERNAME, MAIL_PASSWORD, and MAIL_FROM in production.");
         }
     }
 }

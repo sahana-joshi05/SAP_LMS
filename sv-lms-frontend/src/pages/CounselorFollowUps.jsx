@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Eye, Mail, Pencil, PhoneCall } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Badge from '../components/Badge.jsx';
@@ -10,6 +11,7 @@ const STATUSES = ['Positive', 'Call_Not_Received', 'Interested', 'Not_Interested
 
 export default function CounselorFollowUps() {
   const { auth } = useAuth();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [followUps, setFollowUps] = useState([]);
   const [typeFilter, setTypeFilter] = useState('');
@@ -129,6 +131,10 @@ export default function CounselorFollowUps() {
                         <div className="expanded-content">
                           <div><strong>Notes:</strong> {lead.notes || 'No notes yet.'}</div>
                           <div><strong>History:</strong> {history.length === 0 ? 'No follow-up history.' : history.map((h) => `${h.outcome || h.type} on ${(h.follow_up_at || '').slice(0, 10)}`).join(' | ')}</div>
+                          <div className="expanded-actions">
+                            <a className="btn small secondary" href={lead.email ? `mailto:${lead.email}?subject=SV LMS Course Brochure` : undefined}>Brochure</a>
+                            <button className="btn small" type="button" onClick={() => navigate(`/counselor/admission?leadId=${lead.id}`)} disabled={!lead.email}>Admission</button>
+                          </div>
                         </div>
                       </td>
                     </tr>

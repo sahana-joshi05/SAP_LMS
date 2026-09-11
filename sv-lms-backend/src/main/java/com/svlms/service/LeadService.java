@@ -151,6 +151,11 @@ public class LeadService {
         if (userRepository.existsByEmail(lead.getEmail())) {
             throw new ConflictException("A user with this email already exists");
         }
+        if (request != null && request.getCourseInterested() != null) {
+            Course selectedCourse = courseRepository.findById(request.getCourseInterested())
+                    .orElseThrow(() -> new BadRequestException("Selected course was not found"));
+            lead.setCourseInterested(selectedCourse);
+        }
 
         String tempPassword = (request != null && request.getPassword() != null)
                 ? request.getPassword() : PasswordUtil.defaultTempPassword();

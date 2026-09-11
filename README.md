@@ -168,3 +168,21 @@ proxies `/api/` to the backend) and `ops/` has backup scripts and a migrations p
 for when you move off Hibernate's auto-DDL. `docs/PRODUCTION_READINESS.md` is a checklist
 of what to tighten up before a real launch — none of this is required for local
 development or testing.
+
+### Production email setup
+
+Set these environment variables on the deployed backend service:
+
+```bash
+FRONTEND_BASE_URL=https://your-production-domain
+MAIL_ENABLED=true
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-sending-gmail-address
+MAIL_PASSWORD=your-gmail-app-password
+MAIL_FROM=your-sending-gmail-address
+```
+
+`MAIL_PASSWORD` must be a Gmail App Password. Do not commit it to git. If
+`MAIL_ENABLED` is missing or false, the backend only logs emails and production users
+will not receive their login credentials.

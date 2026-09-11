@@ -23,10 +23,10 @@ Quick reference of items to complete before a real launch.
 - [x] Password reset flow — `/api/auth/forgot-password` and `/api/auth/reset-password`,
       time-limited single-use tokens, generic response to avoid email enumeration, wired
       into the frontend (`ForgotPassword.jsx`, `ResetPassword.jsx`, linked from Login)
-- [x] Real `EmailService` abstraction added (`service/email/`) — currently logs emails
-      to the console instead of sending them, so the whole app (including password
-      reset) works with zero email provider setup; swap in real SMTP/SendGrid later by
-      implementing the same interface
+- [x] Real `EmailService` abstraction added (`service/email/`) — local development logs
+      emails unless SMTP is enabled; production must set `MAIL_ENABLED=true`,
+      `MAIL_USERNAME`, `MAIL_PASSWORD`, and `MAIL_FROM` so credentials and password reset
+      messages are actually delivered
 - [x] Admin role added — limited administrative access (staff account management minus
       Super Admin/Admin creation, course management, view-only oversight of batches,
       students, and fee reports) — see `UserService.create()` for the specific
@@ -50,10 +50,9 @@ Quick reference of items to complete before a real launch.
 - [ ] Set up a CI/CD pipeline to run `mvn test` and `npm run build` automatically
 - [ ] Add structured logging / error tracking (e.g. Sentry)
 - [ ] Build the Placement Officer and SEO Executive modules
-- [ ] Real notifications (email/SMS) beyond the console-logged password reset
+- [ ] Real SMS/WhatsApp notifications beyond SMTP email
 
 ## Phase 2 feature ideas
 
 See the main README's "What's next" section for the full list (Placement Officer,
 SEO Executive, assignments/quizzes, certificates, notifications, audit logs).
-
