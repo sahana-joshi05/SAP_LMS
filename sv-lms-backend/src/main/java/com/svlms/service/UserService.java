@@ -81,7 +81,11 @@ public class UserService {
         user.setPhone(request.getPhone());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
-        userRepository.save(user);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+             throw new ConflictException("A user with this email already exists");
+        }
 
         if (role == User.Role.STUDENT) {
             Student student = new Student();

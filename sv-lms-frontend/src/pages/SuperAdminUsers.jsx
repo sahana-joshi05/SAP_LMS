@@ -17,6 +17,7 @@ export default function SuperAdminUsers() {
   const [showPassword, setShowPassword] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const roleOptions = auth.user.role === 'superadmin' ? SUPERADMIN_ROLES : ADMIN_ROLES;
 
   const load = () => api.listUsers(auth.token).then(setUsers).catch((e) => setMsg({ type: 'error', text: e.message }));
@@ -32,22 +33,30 @@ export default function SuperAdminUsers() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMsg(null);
-    try {
-      if (editingUser) {
-        await api.updateUser(auth.token, editingUser.id, form);
-        setMsg({ type: 'success', text: `User "${form.name}" updated.` });
-      } else {
-        await api.createUser(auth.token, form);
-        setMsg({ type: 'success', text: `User "${form.name}" created.` });
-      }
-      resetForm();
-      load();
-    } catch (err) {
-      setMsg({ type: 'error', text: err.message });
+  e.preventDefault();
+
+  if (submitting) return;
+
+  setSubmitting(true);
+  setMsg(null);
+
+  try {
+    if (editingUser) {
+      await api.updateUser(auth.token, editingUser.id, form);
+      setMsg({ type: 'success', text: `User "${form.name}" updated.` });
+    } else {
+      await api.createUser(auth.token, form);
+      setMsg({ type: 'success', text: `User "${form.name}" created.` });
     }
-  };
+
+    resetForm();
+    await load();
+  } catch (err) {
+    setMsg({ type: 'error', text: err.message });
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleEdit = (user) => {
     setMsg(null);
@@ -118,11 +127,13 @@ export default function SuperAdminUsers() {
               {roleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
-          <button className="btn" type="submit">{editingUser ? 'Update user' : 'Create user'}</button>
-          {editingUser && (
-            <button className="btn secondary" type="button" onClick={resetForm}>
-              <X size={16} /> Cancel
-            </button>
+          <button className="btn" type="submit" disabled={submitting}>
+             {submitting ? (editingUser ? 'Updating...' : 'Creating...') : (editingUser ? 'Update user' : 'Create user')}
+          </button>
+            {editingUser && (
+          <button className="btn secondary" type="button" onClick={resetForm}>
+           <X size={16} /> Cancel
+          </button>
           )}
         </form>
       </div>
