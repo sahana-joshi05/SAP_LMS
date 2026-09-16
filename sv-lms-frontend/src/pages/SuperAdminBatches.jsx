@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, Layers, Users } from 'lucide-react';
+import { Eye, Layers, Trash2, Users } from 'lucide-react';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Badge from '../components/Badge.jsx';
@@ -11,17 +11,35 @@ export default function SuperAdminBatches() {
   const [batches, setBatches] = useState([]);
   const [students, setStudents] = useState([]);
   const [error, setError] = useState('');
+  const [msg, setMsg] = useState(null);
   const [viewStudent, setViewStudent] = useState(null);
 
-  useEffect(() => {
+  const load = () => {
     api.listBatches(auth.token).then(setBatches).catch((e) => setError(e.message));
     api.listStudents(auth.token).then(setStudents).catch((e) => setError(e.message));
+  };
+
+  useEffect(() => {
+    load();
   }, []);
+
+  const removeBatch = async (batch) => {
+    setError('');
+    setMsg(null);
+    try {
+      await api.deleteBatch(auth.token, batch.id);
+      setMsg({ type: 'success', text: `Batch "${batch.batch_name}" removed.` });
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
     <Layout>
       <PageHeader title="Batches & Students" subtitle="Institute-wide view across every batch and student" />
       {error && <div className="msg error">{error}</div>}
+      {msg && <div className={`msg ${msg.type}`}>{msg.text}</div>}
 
       <div className="card">
         <h3><Layers /> All batches</h3>
@@ -29,13 +47,22 @@ export default function SuperAdminBatches() {
           <div className="empty-state">No batches yet.</div>
         ) : (
           <table>
-            <thead><tr><th>Batch</th><th>Course</th><th>Mode</th><th>Timing</th><th>Status</th></tr></thead>
+            <thead><tr><th>Batch</th><th>Course</th><th>Mode</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {batches.map((b) => (
                 <tr key={b.id}>
-                  <td>{b.batch_name}</td><td>{b.course_name}</td>
-                  <td><Badge status={b.mode} /></td><td>{b.timing}</td>
+                  <td>
+                    <div className="list-item-title">{b.batch_name}</div>
+                    <div className="list-item-sub">{b.timing || 'Timing not set'}</div>
+                  </td>
+                  <td>{b.course_name}</td>
+                  <td><Badge status={b.mode} /></td>
                   <td><Badge status={b.status} /></td>
+                  <td>
+                    <button className="icon-danger-btn" type="button" onClick={() => removeBatch(b)} title="Remove batch" aria-label={`Remove ${b.batch_name}`}>
+                      <Trash2 />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

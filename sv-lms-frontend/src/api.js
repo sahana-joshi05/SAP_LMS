@@ -37,6 +37,7 @@ export const api = {
   createLead: (token, payload) => request('/leads', { method: 'POST', body: payload, token }),
   listLeads: (token) => request('/leads', { token }),
   updateLead: (token, id, payload) => request(`/leads/${id}`, { method: 'PATCH', body: payload, token }),
+  deleteLead: (token, id) => request(`/leads/${id}`, { method: 'DELETE', token }),
   assignLeadToMe: (token, id) => request(`/leads/${id}/assign-to-me`, { method: 'POST', token }),
   convertLead: (token, id, payload) => request(`/leads/${id}/convert`, { method: 'POST', body: payload, token }),
 
@@ -44,6 +45,7 @@ export const api = {
   createBatch: (token, payload) => request('/batches', { method: 'POST', body: payload, token }),
   listBatches: (token) => request('/batches', { token }),
   getBatch: (token, id) => request(`/batches/${id}`, { token }),
+  deleteBatch: (token, id) => request(`/batches/${id}`, { method: 'DELETE', token }),
   enrollStudent: (token, batchId, studentId) =>
     request(`/batches/${batchId}/enroll`, { method: 'POST', body: { student_id: studentId }, token }),
 

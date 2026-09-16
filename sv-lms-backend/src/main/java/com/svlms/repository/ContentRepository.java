@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ContentRepository extends JpaRepository<Content, Long> {
     List<Content> findByBatchOrderByUploadedAtDesc(Batch batch);
+    void deleteByBatch(Batch batch);
 }

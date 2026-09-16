@@ -12,4 +12,5 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findByBatchOrderBySessionDateDesc(Batch batch);
     List<Attendance> findByStudentOrderBySessionDateDesc(Student student);
     Optional<Attendance> findByBatchAndStudentAndSessionDate(Batch batch, Student student, LocalDate sessionDate);
+    void deleteByBatch(Batch batch);
 }

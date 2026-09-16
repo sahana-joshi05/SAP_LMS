@@ -10,6 +10,7 @@ import com.svlms.exception.ResourceNotFoundException;
 import com.svlms.repository.*;
 import com.svlms.security.AuthPrincipal;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,15 +24,21 @@ public class BatchService {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final BatchStudentRepository batchStudentRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final ContentRepository contentRepository;
 
     public BatchService(BatchRepository batchRepository, CourseRepository courseRepository,
                          UserRepository userRepository, StudentRepository studentRepository,
-                         BatchStudentRepository batchStudentRepository) {
+                         BatchStudentRepository batchStudentRepository,
+                         AttendanceRepository attendanceRepository,
+                         ContentRepository contentRepository) {
         this.batchRepository = batchRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
         this.batchStudentRepository = batchStudentRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.contentRepository = contentRepository;
     }
 
     public BatchResponse create(CreateBatchRequest request) {
@@ -108,6 +115,15 @@ public class BatchService {
         batchStudentRepository.save(bs);
 
         return Map.of("message", "Student enrolled", "batch_id", batchId, "student_id", student.getId());
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Batch batch = batchRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
+        attendanceRepository.deleteByBatch(batch);
+        contentRepository.deleteByBatch(batch);
+        batchStudentRepository.deleteByBatch(batch);
+        batchRepository.delete(batch);
     }
 
     private BatchResponse toResponse(Batch b) {

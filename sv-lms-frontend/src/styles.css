@@ -348,6 +348,32 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
   width: 100%;
   min-width: 0;
 }
+.admission-lead-summary {
+  flex: 1 0 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.admission-lead-summary div {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.admission-lead-summary span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.admission-lead-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
 .form-actions {
   flex: 1 0 100%;
   display: flex;
@@ -469,6 +495,13 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
 .msg.error { background: var(--danger-bg); color: var(--danger); }
 .msg.success { background: var(--success-bg); color: var(--success); }
 .msg svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.table-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
 
 /* ============ LOGIN ============ */
 .login-page {
@@ -778,9 +811,75 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
   .detail-grid {
     grid-template-columns: 1fr;
   }
+  .admission-lead-summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 860px) {
+  .app-shell {
+    display: block;
+  }
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    padding-bottom: 12px;
+  }
+  .sidebar nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+  .sidebar-link {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
+  .sidebar-footer {
+    display: none;
+  }
+  .main {
+    padding: 24px 16px 48px;
+    max-width: none;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-cta {
+    width: fit-content;
+  }
+  .card,
+  .crm-table-card {
+    overflow-x: auto;
+  }
+  table {
+    min-width: 720px;
+  }
+  .crm-filter-panel,
+  form.inline-form {
+    align-items: stretch;
+  }
+  .field,
+  .admission-form .field,
+  .admission-form .wide-field {
+    flex: 1 1 100%;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-width: 0;
+  }
+  .form-actions,
+  .modal-actions {
+    justify-content: stretch;
+  }
+  .form-actions .btn,
+  .modal-actions .btn {
+    flex: 1;
+  }
   .public-lead-page {
     grid-template-columns: 1fr;
   }

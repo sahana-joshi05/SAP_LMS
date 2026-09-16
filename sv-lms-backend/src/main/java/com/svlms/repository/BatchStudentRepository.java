@@ -12,4 +12,5 @@ public interface BatchStudentRepository extends JpaRepository<BatchStudent, Long
     List<BatchStudent> findByStudent(Student student);
     Optional<BatchStudent> findByBatchAndStudent(Batch batch, Student student);
     boolean existsByBatchAndStudent(Batch batch, Student student);
+    void deleteByBatch(Batch batch);
 }

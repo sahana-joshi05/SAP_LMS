@@ -126,8 +126,14 @@ export default function CounselorLeads() {
   };
 
   const removeLead = async (id) => {
-    await updateStatus(id, 'Lost');
-    setMsg({ type: 'success', text: 'Lead removed from the active list.' });
+    setMsg(null);
+    try {
+      await api.deleteLead(auth.token, id);
+      setMsg({ type: 'success', text: 'Lead removed from the active list.' });
+      load();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    }
   };
 
   const exportCsv = () => {

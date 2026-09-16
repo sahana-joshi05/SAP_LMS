@@ -175,7 +175,6 @@ export default function CounselorAdmissions({ linked = false }) {
       <PageHeader
         title={linked ? 'Link - Admission' : 'Admission'}
         subtitle={linked ? 'Converted applicants linked to admission records' : 'Create student admissions from qualified leads'}
-        cta={!linked && <button className="btn-cta" type="button" onClick={() => openForm()}><PlusCircle size={16} /> Add admission</button>}
       />
       {msg && <div className={`msg ${msg.type}`}>{msg.text}</div>}
       {convertResult && (
@@ -195,20 +194,12 @@ export default function CounselorAdmissions({ linked = false }) {
           <h3><PlusCircle /> Admission details</h3>
           <form className="inline-form admission-form" onSubmit={submitAdmission}>
             <div className="form-section-title">Applicant details</div>
-            <div className="field wide-field">
-              <label>Select lead</label>
-              <select value={form.lead_id} onChange={(e) => handleChange('lead_id', e.target.value)} required>
-                <option value="">-- select lead --</option>
-                {admissionRows.map((lead) => (
-                  <option key={lead.id} value={lead.id}>
-                    {lead.name} - {lead.phone || lead.email || `AT${String(lead.id).padStart(5, '0')}`}
-                  </option>
-                ))}
-              </select>
+            <div className="admission-lead-summary">
+              <div><span>Lead</span><strong>{selectedLead?.name || '-'}</strong></div>
+              <div><span>Lead ID</span><strong>{selectedLead ? `AT${String(selectedLead.id).padStart(5, '0')}` : '-'}</strong></div>
+              <div><span>Phone</span><strong>{selectedLead?.phone || '-'}</strong></div>
+              <div><span>Email</span><strong>{selectedLead?.email || '-'}</strong></div>
             </div>
-            <div className="field"><label>Name</label><input value={selectedLead?.name || ''} readOnly /></div>
-            <div className="field"><label>Phone</label><input value={selectedLead?.phone || ''} readOnly /></div>
-            <div className="field"><label>Email</label><input value={selectedLead?.email || ''} readOnly /></div>
             <div className="field">
               <label>Course opting for</label>
               <select value={form.course_interested} onChange={(e) => handleChange('course_interested', e.target.value)} required>

@@ -43,4 +43,11 @@ public class BatchController {
     public Map<String, Object> enroll(@PathVariable Long id, @RequestBody EnrollStudentRequest request) {
         return batchService.enroll(id, request);
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OPERATIONS','SUPERADMIN')")
+    public Map<String, Object> delete(@PathVariable Long id) {
+        batchService.delete(id);
+        return Map.of("message", "Batch removed");
+    }
 }

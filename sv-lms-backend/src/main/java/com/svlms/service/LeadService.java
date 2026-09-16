@@ -128,7 +128,12 @@ public class LeadService {
 
     public LeadResponse updateStatus(Long id, UpdateLeadRequest request, AuthPrincipal principal) {
         Lead lead = findLeadOrThrow(id);
-        assertOwnLeadOrAdmin(lead, principal, "update");
+        boolean counselorRemovingUnassignedLead = "COUNSELOR".equals(principal.getRole())
+                && lead.getAssignedCounselor() == null
+                && "Lost".equals(request.getStatus());
+        if (!counselorRemovingUnassignedLead) {
+            assertOwnLeadOrAdmin(lead, principal, "update");
+        }
 
         if (request.getStatus() != null) {
             lead.setStatus(Lead.Status.valueOf(request.getStatus()));
@@ -138,6 +143,20 @@ public class LeadService {
         }
         leadRepository.save(lead);
         return toResponse(lead);
+    }
+
+    public void remove(Long id, AuthPrincipal principal) {
+        Lead lead = findLeadOrThrow(id);
+        if (!"SUPERADMIN".equals(principal.getRole())) {
+            boolean ownLead = lead.getAssignedCounselor() != null && lead.getAssignedCounselor().getId().equals(principal.getId());
+            boolean unassignedCounselorLead = "COUNSELOR".equals(principal.getRole()) && lead.getAssignedCounselor() == null;
+            if (!ownLead && !unassignedCounselorLead) {
+                throw new ForbiddenException("You can only remove your own leads");
+            }
+        }
+        lead.setStatus(Lead.Status.Lost);
+        lead.setUpdatedAt(LocalDateTime.now());
+        leadRepository.save(lead);
     }
 
     @Transactional

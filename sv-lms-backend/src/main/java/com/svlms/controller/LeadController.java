@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/leads")
@@ -58,5 +59,12 @@ public class LeadController {
     public ConvertLeadResponse convert(@PathVariable Long id, @RequestBody(required = false) ConvertLeadRequest request,
                                         @AuthenticationPrincipal AuthPrincipal principal) {
         return leadService.convert(id, request, principal);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('COUNSELOR','SUPERADMIN')")
+    public Map<String, Object> remove(@PathVariable Long id, @AuthenticationPrincipal AuthPrincipal principal) {
+        leadService.remove(id, principal);
+        return Map.of("message", "Lead removed");
     }
 }

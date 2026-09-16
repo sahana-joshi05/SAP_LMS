@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, Eye, UserCheck, X } from 'lucide-react';
+import { Bell, Eye, Trash2, UserCheck, X } from 'lucide-react';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Badge from '../components/Badge.jsx';
@@ -23,7 +23,7 @@ export default function SuperAdminLeads() {
   const load = ({ notify = false } = {}) => {
     api.listLeads(auth.token)
       .then((items) => {
-        setLeads(items);
+        setLeads(items.filter((lead) => lead.status !== 'Lost'));
         setKnownLeadIds((previous) => {
           const next = new Set(items.map((lead) => lead.id));
           if (notify && previous && soundEnabled && items.some((lead) => !previous.has(lead.id))) {
@@ -43,6 +43,17 @@ export default function SuperAdminLeads() {
     return () => clearInterval(id);
   }, [auth.token, soundEnabled]);
 
+  const removeLead = async (lead) => {
+    setMsg(null);
+    try {
+      await api.deleteLead(auth.token, lead.id);
+      setMsg({ type: 'success', text: `Lead "${lead.name}" removed.` });
+      load();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    }
+  };
+
   return (
     <Layout>
       <PageHeader
@@ -61,31 +72,44 @@ export default function SuperAdminLeads() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Course</th>
                 <th>Phone</th>
                 <th>Email</th>
                 <th>Status</th>
                 <th>Taken by</th>
-                <th>View</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {leads.map((lead) => (
                 <tr key={lead.id}>
                   <td>{lead.name}</td>
+                  <td>{lead.course_interested_name || '-'}</td>
                   <td>{lead.phone || '-'}</td>
                   <td>{lead.email || '-'}</td>
                   <td><Badge status={lead.status} /></td>
                   <td>{lead.assigned_counselor_name || 'Not assigned'}</td>
                   <td>
-                    <button
-                      type="button"
-                      className="icon-view-btn"
-                      onClick={() => setSelectedLead(lead)}
-                      title="View lead"
-                      aria-label={`View ${lead.name}`}
-                    >
-                      <Eye />
-                    </button>
+                    <div className="table-actions">
+                      <button
+                        type="button"
+                        className="icon-view-btn"
+                        onClick={() => setSelectedLead(lead)}
+                        title="View lead"
+                        aria-label={`View ${lead.name}`}
+                      >
+                        <Eye />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-danger-btn"
+                        onClick={() => removeLead(lead)}
+                        title="Remove lead"
+                        aria-label={`Remove ${lead.name}`}
+                      >
+                        <Trash2 />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -106,7 +130,6 @@ export default function SuperAdminLeads() {
               <div><span>Phone</span><strong>{selectedLead.phone || '-'}</strong></div>
               <div><span>Email</span><strong>{selectedLead.email || '-'}</strong></div>
               <div><span>Status</span><strong><Badge status={selectedLead.status} /></strong></div>
-              <div><span>Source</span><strong>{selectedLead.source || '-'}</strong></div>
               <div><span>Course interested</span><strong>{selectedLead.course_interested_name || '-'}</strong></div>
               <div><span>Taken by</span><strong>{selectedLead.assigned_counselor_name || 'Not assigned'}</strong></div>
               <div><span>Counselor email</span><strong>{selectedLead.assigned_counselor_email || '-'}</strong></div>
