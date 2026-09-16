@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS leads (
     phone VARCHAR(50),
     email VARCHAR(255),
     source VARCHAR(50) DEFAULT 'manual',
-    status VARCHAR(20) NOT NULL DEFAULT 'New' CHECK (status IN ('New','Contacted','Interested','Enrolled','Lost')),
+    status VARCHAR(30) NOT NULL DEFAULT 'New' CHECK (status IN ('New','Contacted','Interested','Positive','Call_Not_Received','Follow_up','Demo_Workshop','Negotiation','Enrolled','Converted','Not_Interested','Lost')),
     assigned_counselor_id BIGINT REFERENCES users(id),
     course_interested_id BIGINT REFERENCES courses(id),
     notes TEXT,
@@ -111,3 +111,43 @@ CREATE TABLE IF NOT EXISTS fee_transactions (
     receipt_no VARCHAR(100),
     collected_by BIGINT REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    actor_user_id BIGINT REFERENCES users(id),
+    actor_role VARCHAR(20),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100),
+    entity_id BIGINT,
+    details TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS follow_ups (
+    id BIGSERIAL PRIMARY KEY,
+    lead_id BIGINT NOT NULL REFERENCES leads(id),
+    follow_up_at TIMESTAMP NOT NULL,
+    type VARCHAR(80),
+    outcome VARCHAR(120),
+    notes TEXT,
+    next_follow_up_at TIMESTAMP,
+    created_by BIGINT REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_assigned_counselor ON leads(assigned_counselor_id);
+CREATE INDEX IF NOT EXISTS idx_batch_students_student ON batch_students(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_fees_student ON fees(student_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_follow_ups_lead ON follow_ups(lead_id);

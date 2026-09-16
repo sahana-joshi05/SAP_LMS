@@ -564,6 +564,10 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
 }
 .crm-table-card { padding: 0; overflow: hidden; }
 .crm-table-card table th, .crm-table-card table td { padding: 14px 16px; }
+.crm-table-card table th:last-child,
+.crm-table-card table td:last-child {
+  width: 230px;
+}
 .action-icons { display: flex; align-items: center; gap: 10px; }
 .action-icons button, .action-icons a {
   width: 26px;
@@ -583,7 +587,17 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+.lead-action-row .action-icons {
+  flex: 0 0 auto;
+}
+.lead-action-row .btn {
+  flex: 0 0 auto;
+}
+.lead-action-row .pickup-btn {
+  min-width: 70px;
 }
 .expanded-row td { background: #FAFBFC; }
 .expanded-content {

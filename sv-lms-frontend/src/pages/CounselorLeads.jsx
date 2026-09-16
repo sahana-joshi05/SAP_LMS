@@ -23,8 +23,6 @@ const STATUSES = [
   'Lost',
 ];
 
-const SOURCES = ['manual', 'website', 'referral', 'walk-in', 'webchat', 'whatsapp', 'WEB'];
-
 export default function CounselorLeads() {
   const { auth } = useAuth();
   const navigate = useNavigate();
@@ -36,7 +34,6 @@ export default function CounselorLeads() {
   const [rowsPerPage, setRowsPerPage] = useState('10');
   const [statusFilter, setStatusFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState(today);
   const [search, setSearch] = useState('');
@@ -77,18 +74,16 @@ export default function CounselorLeads() {
         lead.phone,
         lead.email,
         lead.status,
-        lead.source,
         lead.course_interested_name,
         lead.notes,
       ].some((value) => (value || '').toLowerCase().includes(q));
       const matchesStatus = statusFilter ? lead.status === statusFilter : lead.status !== 'Lost';
       const matchesCourse = !courseFilter || String(lead.course_interested_id || '') === String(courseFilter);
-      const matchesSource = !sourceFilter || (lead.source || '').toLowerCase() === sourceFilter.toLowerCase();
       const matchesFrom = !fromDate || !createdDate || createdDate >= fromDate;
       const matchesTo = !toDate || !createdDate || createdDate <= toDate;
-      return matchesSearch && matchesStatus && matchesCourse && matchesSource && matchesFrom && matchesTo;
+      return matchesSearch && matchesStatus && matchesCourse && matchesFrom && matchesTo;
     }).slice(0, Number(rowsPerPage));
-  }, [leads, search, statusFilter, courseFilter, sourceFilter, fromDate, toDate, rowsPerPage]);
+  }, [leads, search, statusFilter, courseFilter, fromDate, toDate, rowsPerPage]);
 
   const expandAll = () => setExpanded(Object.fromEntries(filteredLeads.map((lead) => [lead.id, true])));
   const collapseAll = () => setExpanded({});
@@ -122,8 +117,9 @@ export default function CounselorLeads() {
     setMsg(null);
     try {
       await api.assignLeadToMe(auth.token, id);
-      setMsg({ type: 'success', text: 'Lead transferred to your follow-up list.' });
-      load();
+      setMsg({ type: 'success', text: 'Lead picked up for follow-up.' });
+      await load();
+      navigate(`/counselor/follow-ups?leadId=${id}`);
     } catch (err) {
       setMsg({ type: 'error', text: err.message });
     }
@@ -135,14 +131,13 @@ export default function CounselorLeads() {
   };
 
   const exportCsv = () => {
-    const headers = ['Lead ID', 'Date', 'Course', 'Student Information', 'Email', 'Source', 'Status', 'Notes'];
+    const headers = ['Lead ID', 'Date', 'Course', 'Student Information', 'Email', 'Status', 'Notes'];
     const rows = filteredLeads.map((lead) => [
       `AT${String(lead.id).padStart(5, '0')}`,
       (lead.created_at || '').slice(0, 10),
       lead.course_interested_name || '',
       lead.name || '',
       lead.email || '',
-      lead.source || '',
       lead.status || '',
       lead.notes || '',
     ]);
@@ -161,7 +156,7 @@ export default function CounselorLeads() {
     <Layout>
       <PageHeader
         title="Leads Management"
-        subtitle="Add enquiries, filter leads, transfer follow-ups, and start admissions"
+        subtitle="Add enquiries, filter leads, pick follow-ups, and start admissions"
         cta={<button className="btn-cta" type="button" onClick={() => { setSoundEnabled(true); playLeadNotificationSound(); }}><Bell size={16} /> {soundEnabled ? 'Lead sound on' : 'Enable lead sound'}</button>}
       />
       {msg && <div className={`msg ${msg.type}`}>{msg.text}</div>}
@@ -189,13 +184,6 @@ export default function CounselorLeads() {
             {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
           </select>
         </div>
-        <div className="field">
-          <label>Select source</label>
-          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
-            <option value="">All sources</option>
-            {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
-          </select>
-        </div>
         <div className="field"><label>From</label><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} /></div>
         <div className="field"><label>To</label><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} /></div>
         <div className="field"><label>Search</label><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." /></div>
@@ -212,12 +200,6 @@ export default function CounselorLeads() {
             <div className="field"><label>Name</label><input name="name" value={form.name} onChange={handleChange} required /></div>
             <div className="field"><label>Phone</label><input name="phone" value={form.phone} onChange={handleChange} /></div>
             <div className="field"><label>Email</label><input name="email" type="email" value={form.email} onChange={handleChange} placeholder="required for admission" /></div>
-            <div className="field">
-              <label>Source</label>
-              <select name="source" value={form.source} onChange={handleChange}>
-                {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
-              </select>
-            </div>
             <div className="field">
               <label>Course interested</label>
               <select name="course_interested" value={form.course_interested} onChange={handleChange}>
@@ -236,7 +218,7 @@ export default function CounselorLeads() {
 
       <div className="card crm-table-card">
         <table>
-          <thead><tr><th>Desk no</th><th>Date/Time</th><th>Course</th><th>Student Information</th><th>Email</th><th>Source</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Desk no</th><th>Date/Time</th><th>Course</th><th>Student Information</th><th>Email</th><th>Actions</th></tr></thead>
           <tbody>
             {filteredLeads.map((lead) => {
               const isOpen = !!expanded[lead.id];
@@ -251,7 +233,6 @@ export default function CounselorLeads() {
                       <div className="list-item-sub">AT{String(lead.id).padStart(5, '0')} {lead.phone ? `- ${lead.phone}` : ''}</div>
                     </td>
                     <td>{lead.email || '-'}</td>
-                    <td>{lead.source || '-'}</td>
                     <td>
                       <div className="lead-action-row">
                         <div className="action-icons">
@@ -260,14 +241,14 @@ export default function CounselorLeads() {
                           <button title="View details" type="button" onClick={() => setExpanded({ ...expanded, [lead.id]: true })}><Eye /></button>
                           <a title="Email applicant" href={lead.email ? `mailto:${lead.email}` : undefined}><Mail /></a>
                         </div>
-                        <button className="btn small secondary" type="button" onClick={() => pickLead(lead.id)}>Transfer</button>
+                        <button className="btn small secondary pickup-btn" type="button" onClick={() => pickLead(lead.id)}>Pickup</button>
                         <button className="btn small danger" type="button" onClick={() => removeLead(lead.id)}><Trash2 size={13} /> Remove</button>
                       </div>
                     </td>
                   </tr>
                   {isOpen && (
                     <tr className="expanded-row">
-                      <td colSpan="7">
+                      <td colSpan="6">
                         <div className="expanded-content">
                           <div><strong>Status:</strong> <Badge status={lead.status} /></div>
                           <div><strong>Phone:</strong> {lead.phone || '-'} &nbsp; <strong>Email:</strong> {lead.email || '-'}</div>

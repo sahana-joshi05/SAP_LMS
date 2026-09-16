@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Eye, Mail, Pencil, PhoneCall } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Badge from '../components/Badge.jsx';
@@ -12,6 +12,7 @@ const STATUSES = ['Positive', 'Call_Not_Received', 'Interested', 'Not_Interested
 export default function CounselorFollowUps() {
   const { auth } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [followUps, setFollowUps] = useState([]);
   const [typeFilter, setTypeFilter] = useState('');
@@ -29,6 +30,15 @@ export default function CounselorFollowUps() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const leadId = searchParams.get('leadId');
+    if (!leadId) return;
+    setSearch(`AT${leadId}`);
+    setFromDate('');
+    setToDate('');
+    setExpanded((current) => ({ ...current, [leadId]: true }));
+  }, [searchParams]);
 
   const historyByLead = useMemo(() => followUps.reduce((acc, item) => {
     const key = String(item.lead_id);

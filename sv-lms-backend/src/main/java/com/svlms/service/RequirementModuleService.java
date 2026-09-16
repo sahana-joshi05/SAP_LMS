@@ -3,8 +3,13 @@ package com.svlms.service;
 import com.svlms.exception.BadRequestException;
 import com.svlms.security.AuthPrincipal;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +44,14 @@ public class RequirementModuleService {
     }
 
     public Map<String, Object> createFollowUp(Map<String, Object> request, AuthPrincipal principal) {
-        require(request, "lead_id", "follow_up_at");
-        Map<String, Object> saved = insert("follow_ups", request, List.of(
+        Map<String, Object> normalizedRequest = normalizeFollowUpRequest(request);
+        require(normalizedRequest, "lead_id", "follow_up_at");
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("created_by", principal.getId());
+        extra.put("created_at", LocalDateTime.now());
+        Map<String, Object> saved = insert("follow_ups", normalizedRequest, List.of(
             "lead_id", "follow_up_at", "type", "outcome", "notes", "next_follow_up_at"
-        ), Map.of("created_by", principal.getId()));
+        ), extra);
         auditService.record(principal, "CREATE_FOLLOW_UP", "follow_ups", id(saved), saved.toString());
         return saved;
     }
@@ -272,6 +281,28 @@ public class RequirementModuleService {
         return rows("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 200");
     }
 
+    private Map<String, Object> normalizeFollowUpRequest(Map<String, Object> request) {
+        Map<String, Object> normalized = new LinkedHashMap<>(request);
+        normalizeDateTimeField(normalized, "follow_up_at");
+        normalizeDateTimeField(normalized, "next_follow_up_at");
+        return normalized;
+    }
+
+    private void normalizeDateTimeField(Map<String, Object> request, String field) {
+        Object value = request.get(field);
+        if (value == null || value.toString().isBlank()) {
+            return;
+        }
+        if (value instanceof LocalDateTime) {
+            return;
+        }
+        try {
+            request.put(field, LocalDateTime.parse(value.toString()));
+        } catch (DateTimeParseException ex) {
+            throw new BadRequestException(field + " must be a valid date and time");
+        }
+    }
+
     private Map<String, Object> insertAudited(String table, Map<String, Object> request, List<String> allowedColumns,
                                                AuthPrincipal principal, String action) {
         Map<String, Object> saved = insert(table, request, allowedColumns, Map.of("created_by", principal.getId()));
@@ -296,7 +327,20 @@ public class RequirementModuleService {
         String columns = String.join(", ", values.keySet());
         String placeholders = String.join(", ", values.keySet().stream().map(k -> "?").toList());
         Object[] args = values.values().toArray();
-        return normalize(jdbcTemplate.queryForMap("INSERT INTO " + table + " (" + columns + ") VALUES (" + placeholders + ") RETURNING *", args));
+        String sql = "INSERT INTO " + table + " (" + columns + ") VALUES (" + placeholders + ")";
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            var preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            for (int i = 0; i < args.length; i++) {
+                preparedStatement.setObject(i + 1, args[i]);
+            }
+            return preparedStatement;
+        }, keyHolder);
+        Long generatedId = generatedId(keyHolder);
+        if (generatedId == null) {
+            throw new BadRequestException("Record was saved but its id could not be read");
+        }
+        return normalize(jdbcTemplate.queryForMap("SELECT * FROM " + table + " WHERE id = ?", generatedId));
     }
 
     private List<Map<String, Object>> rows(String sql, Object... args) {
@@ -327,6 +371,22 @@ public class RequirementModuleService {
     private Long id(Map<String, Object> saved) {
         Object value = saved.get("id");
         return value == null ? null : Long.valueOf(value.toString());
+    }
+
+    private Long generatedId(KeyHolder keyHolder) {
+        Number key = keyHolder.getKey();
+        if (key != null) {
+            return key.longValue();
+        }
+        Map<String, Object> keys = keyHolder.getKeys();
+        if (keys == null) {
+            return null;
+        }
+        Object id = keys.get("id");
+        if (id == null) {
+            id = keys.get("ID");
+        }
+        return id instanceof Number number ? number.longValue() : null;
     }
 
     private Long count(String table) {

@@ -213,6 +213,36 @@ class LmsWorkflowIntegrationTest {
     }
 
     @Test
+    void counselor_canSubmitFollowUpWithBrowserDateTimeValues() throws Exception {
+        String counselorToken = loginAndGetToken("counselor@sapinstitute.com", DEMO_PASSWORD);
+
+        MvcResult leadResult = mockMvc.perform(post("/api/leads")
+                        .header("Authorization", bearer(counselorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "Follow Up Test Lead",
+                                "email", "followuptest@example.com",
+                                "phone", "9000000000"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        long leadId = objectMapper.readTree(leadResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(post("/api/follow-ups")
+                        .header("Authorization", bearer(counselorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "lead_id", leadId,
+                                "follow_up_at", "2026-09-16T11:14",
+                                "type", "call",
+                                "outcome", "Call_Not_Received",
+                                "notes", "Tried calling once",
+                                "next_follow_up_at", "2026-09-17T10:30"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lead_id").value(String.valueOf(leadId)))
+                .andExpect(jsonPath("$.outcome").value("Call_Not_Received"));
+    }
+
+    @Test
     void loginRateLimiter_locksOutAfterRepeatedFailures() throws Exception {
         // Uses a made-up email rather than a shared seeded account - the rate limiter
         // keys purely on the email string in the request (see LoginRateLimiter.java),
