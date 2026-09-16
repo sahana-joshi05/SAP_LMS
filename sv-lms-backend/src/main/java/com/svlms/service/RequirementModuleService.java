@@ -373,21 +373,28 @@ public class RequirementModuleService {
         return value == null ? null : Long.valueOf(value.toString());
     }
 
-    private Long generatedId(KeyHolder keyHolder) {
-        Number key = keyHolder.getKey();
-        if (key != null) {
-            return key.longValue();
-        }
-        Map<String, Object> keys = keyHolder.getKeys();
-        if (keys == null) {
-            return null;
-        }
-        Object id = keys.get("id");
-        if (id == null) {
-            id = keys.get("ID");
-        }
-        return id instanceof Number number ? number.longValue() : null;
+   private Long generatedId(KeyHolder keyHolder) {
+    Map<String, Object> keys = keyHolder.getKeys();
+
+    if (keys == null) {
+        return null;
     }
+
+    Object id = keys.get("id");
+    if (id == null) {
+        id = keys.get("ID");
+    }
+
+    if (id instanceof Number number) {
+        return number.longValue();
+    }
+
+    if (id != null) {
+        return Long.valueOf(id.toString());
+    }
+
+    return null;
+}
 
     private Long count(String table) {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Long.class);
