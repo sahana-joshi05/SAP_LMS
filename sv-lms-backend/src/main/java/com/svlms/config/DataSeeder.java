@@ -6,6 +6,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class DataSeeder implements CommandLineRunner {
 
@@ -33,18 +35,21 @@ public class DataSeeder implements CommandLineRunner {
         upsertUser("Neha SEO", "seo@sapinstitute.com", User.Role.SEO);
         User trainer = upsertUser("Anand Trainer", "trainer@sapinstitute.com", User.Role.TRAINER);
 
-        Course course = courseRepository.findAll().stream()
-                .filter(c -> "SAP-FICO".equals(c.getCode()))
-                .findFirst()
-                .orElseGet(() -> {
-                    Course c = new Course();
-                    c.setName("SAP FICO");
-                    c.setCode("SAP-FICO");
-                    c.setDescription("SAP Financial Accounting and Controlling");
-                    c.setDuration("3 months");
-                    c.setFee(45000.0);
-                    return courseRepository.save(c);
-                });
+        List<CourseSeed> courseSeeds = List.of(
+                new CourseSeed("SAP FICO", "SAP-FICO", "SAP Financial Accounting and Controlling"),
+                new CourseSeed("SAP MM", "SAP-MM", "SAP Materials Management"),
+                new CourseSeed("SAP SD", "SAP-SD", "SAP Sales and Distribution"),
+                new CourseSeed("SAP PP", "SAP-PP", "SAP Production Planning"),
+                new CourseSeed("SAP Ariba", "SAP-ARIBA", "SAP Ariba procurement and sourcing"),
+                new CourseSeed("SAP SuccessFactors", "SAP-SF", "SAP SuccessFactors human capital management"),
+                new CourseSeed("SAP EWM", "SAP-EWM", "SAP Extended Warehouse Management"),
+                new CourseSeed("SAP ABAP", "SAP-ABAP", "SAP ABAP development"),
+                new CourseSeed("SAP PM", "SAP-PM", "SAP Plant Maintenance"),
+                new CourseSeed("Data Analytics", "DATA-ANALYTICS", "Data analytics and reporting")
+        );
+        courseSeeds.forEach(this::upsertCourse);
+
+        Course course = upsertCourse(courseSeeds.get(0));
 
         boolean batchExists = batchRepository.findAll().stream()
                 .anyMatch(b -> "FICO-Morning-Batch-1".equals(b.getBatchName()));
@@ -81,4 +86,21 @@ public class DataSeeder implements CommandLineRunner {
             return userRepository.save(u);
         });
     }
+
+    private Course upsertCourse(CourseSeed seed) {
+        return courseRepository.findAll().stream()
+                .filter(c -> seed.code().equals(c.getCode()))
+                .findFirst()
+                .orElseGet(() -> {
+                    Course c = new Course();
+                    c.setName(seed.name());
+                    c.setCode(seed.code());
+                    c.setDescription(seed.description());
+                    c.setDuration("3 months");
+                    c.setFee(45000.0);
+                    return courseRepository.save(c);
+                });
+    }
+
+    private record CourseSeed(String name, String code, String description) {}
 }
