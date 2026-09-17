@@ -46,6 +46,12 @@ public class ReceiptController {
         return receiptService.getPrintableReceiptHtml(id);
     }
 
+    @PostMapping("/{id}/email")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','OPERATIONS','ADMIN','COUNSELOR')")
+    public ReceiptResponse emailReceipt(@PathVariable Long id) {
+        return receiptService.emailReceipt(id);
+    }
+
     @GetMapping("/number/{receiptNumber}")
     @PreAuthorize("hasAnyRole('SUPERADMIN','OPERATIONS','ADMIN','STUDENT','COUNSELOR')")
     public ReceiptResponse getReceiptByNumber(@PathVariable String receiptNumber) {

@@ -244,6 +244,8 @@ public class LeadService {
         if (receipt != null) {
             response.setReceiptId(receipt.getId());
             response.setReceiptNumber(receipt.getReceiptNumber());
+            response.setReceiptEmailSent(receipt.getEmailSent());
+            response.setReceiptEmailError(receipt.getEmailSendError());
         }
         return response;
     }

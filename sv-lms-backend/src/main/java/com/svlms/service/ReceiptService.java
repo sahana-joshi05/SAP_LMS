@@ -104,8 +104,10 @@ public class ReceiptService {
         receipt.setReceivedDate(LocalDateTime.now());
 
         receiptRepository.save(receipt);
-        sendReceiptToApplicant(receipt);
-        return toResponse(receipt);
+        String emailError = sendReceiptToApplicant(receipt);
+        ReceiptResponse response = toResponse(receipt);
+        response.setEmailSendError(emailError);
+        return response;
     }
 
     @Transactional
@@ -179,22 +181,39 @@ public class ReceiptService {
         return buildReceiptHtml(receipt);
     }
 
-    private void sendReceiptToApplicant(Receipt receipt) {
+    @Transactional
+    public ReceiptResponse emailReceipt(Long id) {
+        Receipt receipt = receiptRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Receipt not found"));
+        String emailError = sendReceiptToApplicant(receipt);
+        ReceiptResponse response = toResponse(receipt);
+        response.setEmailSendError(emailError);
+        return response;
+    }
+
+    private String sendReceiptToApplicant(Receipt receipt) {
         String toEmail = receipt.getStudent().getUser().getEmail();
-        if (toEmail == null || toEmail.isBlank()) return;
-        emailService.sendHtml(
-                toEmail,
-                "SV Curiotech Admission Receipt - " + receipt.getReceiptNumber(),
-                buildReceiptHtml(receipt),
-                buildPlainTextReceipt(receipt)
-        );
-        receipt.setSentToApplicantAt(LocalDateTime.now());
-        receiptRepository.save(receipt);
+        if (toEmail == null || toEmail.isBlank()) return "Applicant email is missing";
+        try {
+            emailService.sendHtml(
+                    toEmail,
+                    "SV Curiotech Admission Receipt - " + receipt.getReceiptNumber(),
+                    buildReceiptHtml(receipt),
+                    buildPlainTextReceipt(receipt)
+            );
+            receipt.setSentToApplicantAt(LocalDateTime.now());
+            receiptRepository.save(receipt);
+            return null;
+        } catch (Exception e) {
+            System.err.println("Failed to email admission receipt " + receipt.getReceiptNumber() + " to " + toEmail + ": " + e.getMessage());
+            return e.getMessage();
+        }
     }
 
     private String buildPlainTextReceipt(Receipt r) {
         return """
                 SV Curiotech Admission Receipt
+                SV LMS | lms.svcuriotech.com | svcuriotech@gmail.com
 
                 Date: %s
                 Admission NO: %s
@@ -281,6 +300,7 @@ public class ReceiptService {
                 .brand { text-align: center; border-bottom: 2px solid #1d4ed8; padding-bottom: 14px; margin-bottom: 18px; }
                 .brand h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .04em; }
                 .brand p { margin: 0; font-size: 12px; color: #475569; }
+                .company-line { margin-top: 5px; font-size: 11px; color: #334155; }
                 .title-row { display: flex; justify-content: space-between; align-items: center; margin: 16px 0; gap: 12px; }
                 .title-row h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
                 .stamp { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; padding: 7px 10px; font-weight: 700; font-size: 12px; }
@@ -308,6 +328,7 @@ public class ReceiptService {
                 <div class="brand">
                   <h1>SV CURIOTECH</h1>
                   <p>SAP Training Institute | Admission Confirmation & Payment Receipt</p>
+                  <div class="company-line">SV LMS | lms.svcuriotech.com | svcuriotech@gmail.com</div>
                 </div>
                 <div class="title-row">
                   <h2>Admission Receipt</h2>
@@ -465,6 +486,7 @@ public class ReceiptService {
         if (receipt.getSentToApplicantAt() != null) {
             dto.setSentToApplicantAt(receipt.getSentToApplicantAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
+        dto.setEmailSent(receipt.getSentToApplicantAt() != null);
 
         return dto;
     }

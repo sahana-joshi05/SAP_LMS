@@ -87,6 +87,7 @@ export const api = {
 
   // Certificates, notifications, reports
   listReceipts: (token) => request('/receipts', { token }),
+  emailReceipt: (token, id) => request(`/receipts/${id}/email`, { method: 'POST', token }),
   listCertificates: (token) => request('/certificates', { token }),
   createCertificate: (token, payload) => request('/certificates', { method: 'POST', body: payload, token }),
   listNotifications: (token) => request('/notifications', { token }),

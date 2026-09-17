@@ -601,6 +601,70 @@ form.inline-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-
 .crm-table-card table td:last-child {
   width: 230px;
 }
+.receipt-table-card table {
+  table-layout: fixed;
+}
+.receipt-table-card table th,
+.receipt-table-card table td {
+  vertical-align: middle;
+}
+.receipt-table-card table th:last-child,
+.receipt-table-card table td:last-child {
+  width: 92px;
+}
+.receipt-table-card table th:nth-child(1),
+.receipt-table-card table td:nth-child(1) {
+  width: 150px;
+}
+.receipt-table-card table th:nth-child(2),
+.receipt-table-card table td:nth-child(2) {
+  width: 105px;
+}
+.receipt-table-card table th:nth-child(3),
+.receipt-table-card table td:nth-child(3) {
+  width: 190px;
+}
+.receipt-table-card table th:nth-child(6),
+.receipt-table-card table td:nth-child(6) {
+  width: 105px;
+}
+.receipt-table-card .action-icons {
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+.receipt-money-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 150px;
+  font-size: 12.5px;
+}
+.receipt-money-row span {
+  color: var(--muted);
+}
+.receipt-money-row strong {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+.receipt-mail-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.receipt-mail-status.sent {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.receipt-mail-status.pending {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
 .action-icons { display: flex; align-items: center; gap: 10px; }
 .action-icons button, .action-icons a {
   width: 26px;

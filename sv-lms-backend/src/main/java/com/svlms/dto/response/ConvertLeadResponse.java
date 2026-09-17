@@ -7,6 +7,8 @@ public class ConvertLeadResponse {
     private String tempPassword;
     private Long receiptId;
     private String receiptNumber;
+    private Boolean receiptEmailSent;
+    private String receiptEmailError;
 
     public ConvertLeadResponse(String message, Long studentId, String loginEmail, String tempPassword) {
         this.message = message;
@@ -27,4 +29,8 @@ public class ConvertLeadResponse {
     public void setReceiptId(Long receiptId) { this.receiptId = receiptId; }
     public String getReceiptNumber() { return receiptNumber; }
     public void setReceiptNumber(String receiptNumber) { this.receiptNumber = receiptNumber; }
+    public Boolean getReceiptEmailSent() { return receiptEmailSent; }
+    public void setReceiptEmailSent(Boolean receiptEmailSent) { this.receiptEmailSent = receiptEmailSent; }
+    public String getReceiptEmailError() { return receiptEmailError; }
+    public void setReceiptEmailError(String receiptEmailError) { this.receiptEmailError = receiptEmailError; }
 }

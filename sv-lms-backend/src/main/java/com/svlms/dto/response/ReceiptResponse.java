@@ -24,6 +24,8 @@ public class ReceiptResponse {
     private String purpose;
     private String issuedDate;
     private String sentToApplicantAt;
+    private Boolean emailSent;
+    private String emailSendError;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -93,4 +95,10 @@ public class ReceiptResponse {
 
     public String getSentToApplicantAt() { return sentToApplicantAt; }
     public void setSentToApplicantAt(String sentToApplicantAt) { this.sentToApplicantAt = sentToApplicantAt; }
+
+    public Boolean getEmailSent() { return emailSent; }
+    public void setEmailSent(Boolean emailSent) { this.emailSent = emailSent; }
+
+    public String getEmailSendError() { return emailSendError; }
+    public void setEmailSendError(String emailSendError) { this.emailSendError = emailSendError; }
 }

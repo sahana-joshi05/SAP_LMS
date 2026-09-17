@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Link as LinkIcon, PlusCircle, KeyRound } from 'lucide-react';
+import { CheckCircle2, Link as LinkIcon, Mail, PlusCircle, Printer, KeyRound } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -40,6 +40,7 @@ export default function CounselorAdmissions({ linked = false }) {
   const location = useLocation();
   const [leads, setLeads] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [receipts, setReceipts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_ADMISSION);
   const [msg, setMsg] = useState(null);
@@ -48,6 +49,7 @@ export default function CounselorAdmissions({ linked = false }) {
   const load = () => {
     api.listLeads(auth.token).then(setLeads).catch((e) => setMsg({ type: 'error', text: e.message }));
     api.listCourses(auth.token).then(setCourses).catch(() => {});
+    api.listReceipts(auth.token).then(setReceipts).catch(() => {});
   };
 
   useEffect(() => { load(); }, []);
@@ -74,6 +76,8 @@ export default function CounselorAdmissions({ linked = false }) {
     [courses, form.course_interested],
   );
 
+  const showTransactionId = ['Online', 'UPI', 'Card', 'Bank Transfer'].includes(form.payment_mode);
+  const showBankName = ['Online', 'Bank Transfer'].includes(form.payment_mode);
   const remainingAmount = Math.max((Number(form.total_amount) || 0) - (Number(form.amount_paid) || 0), 0);
 
   const openReceipt = async (receiptId) => {
@@ -83,6 +87,21 @@ export default function CounselorAdmissions({ linked = false }) {
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank', 'noopener,noreferrer');
     setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
+  const emailReceipt = async (receiptId) => {
+    setMsg(null);
+    try {
+      const receipt = await api.emailReceipt(auth.token, receiptId);
+      await load();
+      if (receipt.email_sent) {
+        setMsg({ type: 'success', text: `Receipt emailed to ${receipt.student_email}.` });
+      } else {
+        setMsg({ type: 'error', text: `Receipt email not sent: ${receipt.email_send_error || 'Please check SMTP configuration.'}` });
+      }
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    }
   };
 
   const openForm = (lead = null) => {
@@ -121,6 +140,15 @@ export default function CounselorAdmissions({ linked = false }) {
         ...form,
         course_interested: value,
         total_amount: course?.fee ? String(course.fee) : form.total_amount,
+      });
+      return;
+    }
+    if (name === 'payment_mode') {
+      setForm({
+        ...form,
+        payment_mode: value,
+        transaction_id: value === 'Cash' ? '' : form.transaction_id,
+        bank_name: ['Online', 'Bank Transfer'].includes(value) ? form.bank_name : '',
       });
       return;
     }
@@ -210,10 +238,23 @@ export default function CounselorAdmissions({ linked = false }) {
           <KeyRound size={16} />
           Student login: <strong>{convertResult.login_email}</strong> &middot; Temp password: <strong>{convertResult.temp_password}</strong>
           {convertResult.receipt_id && (
+            <>
+              &middot; Receipt email: <strong>{convertResult.receipt_email_sent ? 'Sent' : 'Pending'}</strong>
+            </>
+          )}
+          {convertResult.receipt_id && (
             <button className="btn small secondary" type="button" onClick={() => openReceipt(convertResult.receipt_id)}>
               Open receipt {convertResult.receipt_number}
             </button>
           )}
+        </div>
+      )}
+      {convertResult?.receipt_id && !convertResult.receipt_email_sent && (
+        <div className="msg error">
+          Receipt was created, but email was not sent. {convertResult.receipt_email_error || 'Please check SMTP configuration.'}
+          <button className="btn small secondary" type="button" onClick={() => emailReceipt(convertResult.receipt_id)}>
+            Retry email
+          </button>
         </div>
       )}
 
@@ -286,8 +327,12 @@ export default function CounselorAdmissions({ linked = false }) {
                 <option value="Bank Transfer">Bank Transfer</option>
               </select>
             </div>
-            <div className="field"><label>Transaction ID</label><input value={form.transaction_id} onChange={(e) => handleChange('transaction_id', e.target.value)} /></div>
-            <div className="field"><label>Bank name</label><input value={form.bank_name} onChange={(e) => handleChange('bank_name', e.target.value)} /></div>
+            {showTransactionId && (
+              <div className="field"><label>Transaction ID</label><input value={form.transaction_id} onChange={(e) => handleChange('transaction_id', e.target.value)} /></div>
+            )}
+            {showBankName && (
+              <div className="field"><label>Bank name</label><input value={form.bank_name} onChange={(e) => handleChange('bank_name', e.target.value)} /></div>
+            )}
 
             <div className="form-section-title">Document details</div>
             <div className="field wide-field"><label>Documents</label><textarea rows={2} value={form.document_details} onChange={(e) => handleChange('document_details', e.target.value)} placeholder="Aadhaar, marks cards, degree certificate, photo, pending documents" /></div>
@@ -302,7 +347,33 @@ export default function CounselorAdmissions({ linked = false }) {
 
       <div className="card">
         <h3>{linked ? <LinkIcon /> : <CheckCircle2 />} {linked ? 'Linked admissions' : 'Admission pipeline'}</h3>
-        {admissionRows.length === 0 ? (
+        {!linked && receipts.length > 0 ? (
+          <table>
+            <thead><tr><th>Desk no</th><th>Date/Time</th><th>Course</th><th>Student Information</th><th>Email</th><th>Actions</th></tr></thead>
+            <tbody>
+              {receipts.map((receipt) => (
+                <tr key={receipt.id}>
+                  <td>{receipt.issued_by_name || '-'}</td>
+                  <td>{receipt.issued_date || '-'}</td>
+                  <td>{receipt.course_name || '-'}</td>
+                  <td>
+                    <div className="list-item-title">{receipt.student_name || '-'}</div>
+                    <div className="list-item-sub">
+                      {receipt.admission_number || '-'} {receipt.student_phone ? `- ${receipt.student_phone}` : ''}
+                    </div>
+                  </td>
+                  <td>{receipt.student_email || '-'}</td>
+                  <td>
+                    <div className="action-icons">
+                      <button title="Print receipt" type="button" onClick={() => openReceipt(receipt.id)}><Printer /></button>
+                      <button title="Email receipt" type="button" onClick={() => emailReceipt(receipt.id)} disabled={!receipt.student_email}><Mail /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : admissionRows.length === 0 ? (
           <div className="empty-state">No matching applicants yet.</div>
         ) : (
           <table>
