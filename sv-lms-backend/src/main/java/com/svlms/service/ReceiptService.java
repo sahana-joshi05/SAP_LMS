@@ -9,11 +9,20 @@ import com.svlms.exception.ResourceNotFoundException;
 import com.svlms.repository.*;
 import com.svlms.security.AuthPrincipal;
 import com.svlms.service.email.EmailService;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -195,11 +204,44 @@ public class ReceiptService {
         String toEmail = receipt.getStudent().getUser().getEmail();
         if (toEmail == null || toEmail.isBlank()) return "Applicant email is missing";
         try {
-            emailService.sendHtml(
+            String htmlBody = """
+                    <p>Dear %s,</p>
+                    <p>Your admission has been confirmed. Please find your SV Curiotech admission receipt attached as a PDF.</p>
+                    <p><strong>Admission No:</strong> %s<br>
+                    <strong>Receipt No:</strong> %s<br>
+                    <strong>Course:</strong> %s</p>
+                    <p>Regards,<br>SV Curiotech</p>
+                    """.formatted(
+                    escape(receipt.getStudent().getUser().getName()),
+                    escape(receipt.getAdmissionNumber()),
+                    escape(receipt.getReceiptNumber()),
+                    escape(receipt.getPurpose())
+            );
+            String textBody = """
+                    Dear %s,
+
+                    Your admission has been confirmed. Please find your SV Curiotech admission receipt attached as a PDF.
+
+                    Admission No: %s
+                    Receipt No: %s
+                    Course: %s
+
+                    Regards,
+                    SV Curiotech
+                    """.formatted(
+                    safe(receipt.getStudent().getUser().getName()),
+                    safe(receipt.getAdmissionNumber()),
+                    safe(receipt.getReceiptNumber()),
+                    safe(receipt.getPurpose())
+            );
+            emailService.sendHtmlWithAttachment(
                     toEmail,
                     "SV Curiotech Admission Receipt - " + receipt.getReceiptNumber(),
-                    buildReceiptHtml(receipt),
-                    buildPlainTextReceipt(receipt)
+                    htmlBody,
+                    textBody,
+                    receiptFileName(receipt),
+                    buildReceiptPdf(receipt),
+                    "application/pdf"
             );
             receipt.setSentToApplicantAt(LocalDateTime.now());
             receiptRepository.save(receipt);
@@ -418,6 +460,168 @@ public class ReceiptService {
                 "Amount In Words", r.getAmountInWords(),
                 "Counselor", r.getIssuedBy().getName()
         );
+    }
+
+    private byte[] buildReceiptPdf(Receipt r) {
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
+
+            PDType1Font regular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+            PDType1Font bold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
+            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+                PdfWriter pdf = new PdfWriter(content, regular, bold);
+                pdf.center("SV CURIOTECH", 18, true);
+                pdf.center("SAP Training Institute | Admission Confirmation & Payment Receipt", 10, false);
+                pdf.center("SV LMS | lms.svcuriotech.com | svcuriotech@gmail.com", 9, false);
+                pdf.rule();
+                pdf.heading("ADMISSION RECEIPT");
+
+                pdf.pair("Admission ID", r.getAdmissionNumber(), "Receipt No", r.getReceiptNumber());
+                pdf.pair("Date", formatDate(r.getIssuedDate()), "Admission For", r.getPurpose());
+                pdf.pair("Name Of Candidate", r.getStudent().getUser().getName(), "Mobile No", r.getStudent().getUser().getPhone());
+                pdf.pair("Email ID", r.getStudent().getUser().getEmail(), "Gender", student(r).getGender());
+                pdf.pair("Date Of Birth", student(r).getDateOfBirth(), "Counselor", r.getIssuedBy().getName());
+                pdf.pair("Address", r.getApplicantAddress(), "City", r.getApplicantCity());
+                pdf.pair("State", student(r).getState(), "Country", student(r).getCountry());
+                pdf.pair("Amount In Words", r.getAmountInWords(), "Payment Mode", r.getPaymentMode());
+
+                pdf.heading("Educational Details");
+                pdf.pair("Degree", student(r).getDegree(), "Passed Year", student(r).getPassedYear());
+                pdf.pair("Marks", student(r).getMarks(), "University", student(r).getUniversity());
+                pdf.textBlock("Education Notes", student(r).getEducationalDetails());
+
+                pdf.heading("Fee & Payment Details");
+                pdf.pair("Course Fees", money(r.getTotalAmount()), "Paid Fees", money(r.getAmountPaid()));
+                pdf.pair("Remaining Amount", money(r.getBalanceAmount()), "Due Date", student(r).getFeeDueDate());
+                pdf.pair("Transaction ID", r.getTransactionId(), "Bank Name", r.getBankName());
+                pdf.textBlock("Fee Notes", student(r).getFeeDetails());
+
+                pdf.heading("Document Details");
+                pdf.textBlock("Documents", student(r).getDocumentDetails());
+
+                pdf.rule();
+                pdf.small("This receipt confirms admission based on the details provided by the student and verified by the counselor.");
+                pdf.small("Remaining fees, if any, must be paid on or before the due date.");
+                pdf.signature(r.getIssuedBy().getName());
+            }
+
+            document.save(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not generate receipt PDF", e);
+        }
+    }
+
+    private String receiptFileName(Receipt receipt) {
+        return "Admission_Receipt_" + safe(receipt.getReceiptNumber()).replaceAll("[^A-Za-z0-9_-]", "_") + ".pdf";
+    }
+
+    private static class PdfWriter {
+        private final PDPageContentStream content;
+        private final PDType1Font regular;
+        private final PDType1Font bold;
+        private float y = 790;
+        private final float left = 42;
+        private final float right = 553;
+
+        PdfWriter(PDPageContentStream content, PDType1Font regular, PDType1Font bold) {
+            this.content = content;
+            this.regular = regular;
+            this.bold = bold;
+        }
+
+        void center(String text, int size, boolean isBold) throws IOException {
+            PDType1Font font = isBold ? bold : regular;
+            float width = font.getStringWidth(clean(text)) / 1000 * size;
+            write(clean(text), font, size, (595 - width) / 2, y);
+            y -= size + 8;
+        }
+
+        void heading(String text) throws IOException {
+            y -= 8;
+            write(clean(text), bold, 13, left, y);
+            y -= 20;
+        }
+
+        void pair(String labelA, String valueA, String labelB, String valueB) throws IOException {
+            field(labelA, valueA, left, y, 245);
+            field(labelB, valueB, 305, y, 245);
+            y -= 42;
+        }
+
+        void textBlock(String label, String value) throws IOException {
+            write(clean(label), bold, 8, left, y);
+            y -= 13;
+            for (String line : wrap(clean(value), 95)) {
+                write(line, regular, 9, left, y);
+                y -= 12;
+            }
+            y -= 6;
+        }
+
+        void small(String text) throws IOException {
+            for (String line : wrap(clean(text), 100)) {
+                write(line, regular, 8, left, y);
+                y -= 11;
+            }
+        }
+
+        void signature(String name) throws IOException {
+            y -= 34;
+            line(365, y, 535, y);
+            y -= 13;
+            write(clean(name), bold, 9, 390, y);
+            y -= 12;
+            write("Admission Confirmed By Counselor", regular, 8, 372, y);
+        }
+
+        void rule() throws IOException {
+            y -= 6;
+            line(left, y, right, y);
+            y -= 16;
+        }
+
+        private void field(String label, String value, float x, float fieldY, int maxChars) throws IOException {
+            write(clean(label), bold, 8, x, fieldY);
+            float lineY = fieldY - 14;
+            for (String line : wrap(clean(value), maxChars / 5)) {
+                write(line, regular, 9, x, lineY);
+                lineY -= 11;
+            }
+        }
+
+        private void write(String text, PDType1Font font, int size, float x, float writeY) throws IOException {
+            content.beginText();
+            content.setFont(font, size);
+            content.newLineAtOffset(x, writeY);
+            content.showText(clean(text));
+            content.endText();
+        }
+
+        private void line(float x1, float y1, float x2, float y2) throws IOException {
+            content.moveTo(x1, y1);
+            content.lineTo(x2, y2);
+            content.stroke();
+        }
+
+        private static String clean(String value) {
+            return value == null || value.isBlank() ? "-" : value.replace("\n", " ").replace("\r", " ");
+        }
+
+        private static List<String> wrap(String value, int maxChars) {
+            String text = clean(value);
+            List<String> lines = new ArrayList<>();
+            while (text.length() > maxChars) {
+                int split = text.lastIndexOf(' ', maxChars);
+                if (split < 12) split = maxChars;
+                lines.add(text.substring(0, split).trim());
+                text = text.substring(split).trim();
+            }
+            lines.add(text);
+            return lines;
+        }
     }
 
     private String cells(String... values) {

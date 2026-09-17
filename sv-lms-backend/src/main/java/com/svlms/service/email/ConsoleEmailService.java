@@ -41,4 +41,16 @@ public class ConsoleEmailService implements EmailService {
         log.info(" HTML:    {}", htmlBody);
         log.info("=================================================================");
     }
+
+    @Override
+    public void sendHtmlWithAttachment(String toEmail, String subject, String htmlBody, String textFallback,
+                                       String attachmentName, byte[] attachmentBytes, String contentType) {
+        log.info("=================================================================");
+        log.info(" [DEV HTML EMAIL WITH ATTACHMENT - not actually sent]");
+        log.info(" To:         {}", toEmail);
+        log.info(" Subject:    {}", subject);
+        log.info(" Attachment: {} ({} bytes, {})", attachmentName, attachmentBytes.length, contentType);
+        log.info(" Text:       {}", textFallback);
+        log.info("=================================================================");
+    }
 }

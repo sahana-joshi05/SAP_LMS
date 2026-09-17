@@ -15,4 +15,9 @@ public interface EmailService {
     default void sendHtml(String toEmail, String subject, String htmlBody, String textFallback) {
         send(toEmail, subject, textFallback);
     }
+
+    default void sendHtmlWithAttachment(String toEmail, String subject, String htmlBody, String textFallback,
+                                        String attachmentName, byte[] attachmentBytes, String contentType) {
+        sendHtml(toEmail, subject, htmlBody, textFallback);
+    }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Link as LinkIcon, Mail, PlusCircle, Printer, KeyRound } from 'lucide-react';
+import { CheckCircle2, Eye, Link as LinkIcon, Mail, Pencil, PlusCircle, Printer, KeyRound, Trash2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -45,6 +45,9 @@ export default function CounselorAdmissions({ linked = false }) {
   const [form, setForm] = useState(EMPTY_ADMISSION);
   const [msg, setMsg] = useState(null);
   const [convertResult, setConvertResult] = useState(null);
+  const [viewLead, setViewLead] = useState(null);
+  const [editLead, setEditLead] = useState(null);
+  const [editNotes, setEditNotes] = useState('');
 
   const load = () => {
     api.listLeads(auth.token).then(setLeads).catch((e) => setMsg({ type: 'error', text: e.message }));
@@ -221,6 +224,38 @@ export default function CounselorAdmissions({ linked = false }) {
     }
   };
 
+  const openLinkedEdit = (lead) => {
+    setEditLead(lead);
+    setEditNotes(lead.notes || '');
+  };
+
+  const submitLinkedEdit = async (e) => {
+    e.preventDefault();
+    if (!editLead) return;
+    setMsg(null);
+    try {
+      await api.updateLead(auth.token, editLead.id, { notes: editNotes });
+      setMsg({ type: 'success', text: 'Linked admission updated.' });
+      setEditLead(null);
+      setEditNotes('');
+      load();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    }
+  };
+
+  const removeLinkedAdmission = async (lead) => {
+    if (!window.confirm(`Remove ${lead.name} from linked admissions?`)) return;
+    setMsg(null);
+    try {
+      await api.deleteLead(auth.token, lead.id);
+      setMsg({ type: 'success', text: 'Linked admission removed.' });
+      load();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    }
+  };
+
   return (
     <Layout>
       <PageHeader
@@ -377,7 +412,7 @@ export default function CounselorAdmissions({ linked = false }) {
           <div className="empty-state">No matching applicants yet.</div>
         ) : (
           <table>
-            <thead><tr><th>Lead ID</th><th>Name</th><th>Contact</th><th>Status</th><th>Course</th><th>Notes</th>{!linked && <th>Action</th>}</tr></thead>
+            <thead><tr><th>Lead ID</th><th>Name</th><th>Contact</th><th>Status</th><th>Course</th><th>Notes</th><th>Actions</th></tr></thead>
             <tbody>
               {admissionRows.map((lead) => (
                 <tr key={lead.id}>
@@ -387,19 +422,62 @@ export default function CounselorAdmissions({ linked = false }) {
                   <td><Badge status={lead.status} /></td>
                   <td>{lead.course_interested_name || '-'}</td>
                   <td>{lead.notes || '-'}</td>
-                  {!linked && (
-                    <td>
+                  <td>
+                    {linked ? (
+                      <div className="action-icons">
+                        <button title="View details" type="button" onClick={() => setViewLead(lead)}><Eye /></button>
+                        <button title="Edit notes" type="button" onClick={() => openLinkedEdit(lead)}><Pencil /></button>
+                        <button title="Remove linked admission" type="button" onClick={() => removeLinkedAdmission(lead)}><Trash2 /></button>
+                      </div>
+                    ) : (
                       <button className="btn small secondary" type="button" onClick={() => openForm(lead)} disabled={!lead.email}>
                         Add admission
                       </button>
-                    </td>
-                  )}
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {viewLead && (
+        <div className="modal-backdrop">
+          <div className="modal-card lead-view-modal">
+            <button className="modal-close" type="button" onClick={() => setViewLead(null)}>x</button>
+            <h3><Eye /> Admission details</h3>
+            <div className="detail-grid">
+              <div><span>Lead ID</span><strong>AT{String(viewLead.id).padStart(5, '0')}</strong></div>
+              <div><span>Name</span><strong>{viewLead.name || '-'}</strong></div>
+              <div><span>Phone</span><strong>{viewLead.phone || '-'}</strong></div>
+              <div><span>Email</span><strong>{viewLead.email || '-'}</strong></div>
+              <div><span>Status</span><strong>{viewLead.status || '-'}</strong></div>
+              <div><span>Course</span><strong>{viewLead.course_interested_name || '-'}</strong></div>
+              <div className="detail-full"><span>Notes</span><strong>{viewLead.notes || '-'}</strong></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editLead && (
+        <div className="modal-backdrop">
+          <div className="modal-card">
+            <button className="modal-close" type="button" onClick={() => setEditLead(null)}>x</button>
+            <h3><Pencil /> Edit linked admission</h3>
+            <form onSubmit={submitLinkedEdit}>
+              <div className="field">
+                <label>Notes</label>
+                <textarea rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+              </div>
+              <div className="modal-actions">
+                <button className="btn secondary" type="button" onClick={() => setEditLead(null)}>Cancel</button>
+                <button className="btn" type="submit">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

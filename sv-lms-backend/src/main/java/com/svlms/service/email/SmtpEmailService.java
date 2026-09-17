@@ -2,6 +2,7 @@ package com.svlms.service.email;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.util.ByteArrayDataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
@@ -44,6 +45,23 @@ public class SmtpEmailService implements EmailService {
             mailSender.send(message);
         } catch (MessagingException e) {
             throw new IllegalStateException("Could not prepare HTML email", e);
+        }
+    }
+
+    @Override
+    public void sendHtmlWithAttachment(String toEmail, String subject, String htmlBody, String textFallback,
+                                       String attachmentName, byte[] attachmentBytes, String contentType) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(textFallback, htmlBody);
+            helper.addAttachment(attachmentName, new ByteArrayDataSource(attachmentBytes, contentType));
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new IllegalStateException("Could not prepare email attachment", e);
         }
     }
 }
