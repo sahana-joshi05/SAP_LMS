@@ -36,7 +36,7 @@ public class SmtpEmailService implements EmailService {
     public void sendHtml(String toEmail, String subject, String htmlBody, String textFallback) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
             helper.setSubject(subject);
