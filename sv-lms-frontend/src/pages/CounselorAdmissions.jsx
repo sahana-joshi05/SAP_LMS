@@ -9,6 +9,9 @@ import { api } from '../api.js';
 
 const EMPTY_ADMISSION = {
   lead_id: '',
+  applicant_name: '',
+  applicant_phone: '',
+  applicant_email: '',
   course_interested: '',
   total_amount: '',
   amount_paid: '',
@@ -90,6 +93,9 @@ export default function CounselorAdmissions({ linked = false }) {
     setForm({
       ...EMPTY_ADMISSION,
       lead_id: lead ? String(lead.id) : '',
+      applicant_name: lead?.name || '',
+      applicant_phone: lead?.phone || '',
+      applicant_email: lead?.email || '',
       course_interested: courseId,
       total_amount: course?.fee ? String(course.fee) : '',
     });
@@ -126,8 +132,12 @@ export default function CounselorAdmissions({ linked = false }) {
     setMsg(null);
     setConvertResult(null);
 
-    if (!form.lead_id) {
-      setMsg({ type: 'error', text: 'Please select a lead.' });
+    if (!form.lead_id && !form.applicant_name.trim()) {
+      setMsg({ type: 'error', text: 'Please enter the applicant name.' });
+      return;
+    }
+    if (!form.lead_id && !form.applicant_email.trim()) {
+      setMsg({ type: 'error', text: 'Please enter the applicant email to create the student login.' });
       return;
     }
     if (!form.course_interested) {
@@ -136,7 +146,20 @@ export default function CounselorAdmissions({ linked = false }) {
     }
 
     try {
-      const result = await api.convertLead(auth.token, form.lead_id, {
+      let leadId = form.lead_id;
+      if (!leadId) {
+        const newLead = await api.createLead(auth.token, {
+          name: form.applicant_name,
+          phone: form.applicant_phone,
+          email: form.applicant_email,
+          source: 'manual',
+          course_interested: Number(form.course_interested),
+          notes: form.personal_details,
+        });
+        leadId = newLead.id;
+      }
+
+      const result = await api.convertLead(auth.token, leadId, {
         course_interested: Number(form.course_interested),
         total_amount: form.total_amount ? Number(form.total_amount) : null,
         amount_paid: form.amount_paid ? Number(form.amount_paid) : 0,
@@ -175,6 +198,11 @@ export default function CounselorAdmissions({ linked = false }) {
       <PageHeader
         title={linked ? 'Link - Admission' : 'Admission'}
         subtitle={linked ? 'Converted applicants linked to admission records' : 'Create student admissions from qualified leads'}
+        cta={!linked && (
+          <button className="btn-cta" type="button" onClick={() => openForm()}>
+            <PlusCircle size={16} /> Add admission
+          </button>
+        )}
       />
       {msg && <div className={`msg ${msg.type}`}>{msg.text}</div>}
       {convertResult && (
@@ -194,12 +222,20 @@ export default function CounselorAdmissions({ linked = false }) {
           <h3><PlusCircle /> Admission details</h3>
           <form className="inline-form admission-form" onSubmit={submitAdmission}>
             <div className="form-section-title">Applicant details</div>
-            <div className="admission-lead-summary">
-              <div><span>Lead</span><strong>{selectedLead?.name || '-'}</strong></div>
-              <div><span>Lead ID</span><strong>{selectedLead ? `AT${String(selectedLead.id).padStart(5, '0')}` : '-'}</strong></div>
-              <div><span>Phone</span><strong>{selectedLead?.phone || '-'}</strong></div>
-              <div><span>Email</span><strong>{selectedLead?.email || '-'}</strong></div>
-            </div>
+            {form.lead_id ? (
+              <div className="admission-lead-summary">
+                <div><span>Lead</span><strong>{selectedLead?.name || '-'}</strong></div>
+                <div><span>Lead ID</span><strong>{selectedLead ? `AT${String(selectedLead.id).padStart(5, '0')}` : '-'}</strong></div>
+                <div><span>Phone</span><strong>{selectedLead?.phone || '-'}</strong></div>
+                <div><span>Email</span><strong>{selectedLead?.email || '-'}</strong></div>
+              </div>
+            ) : (
+              <>
+                <div className="field"><label>Name</label><input value={form.applicant_name} onChange={(e) => handleChange('applicant_name', e.target.value)} required /></div>
+                <div className="field"><label>Phone</label><input value={form.applicant_phone} onChange={(e) => handleChange('applicant_phone', e.target.value)} /></div>
+                <div className="field"><label>Email</label><input type="email" value={form.applicant_email} onChange={(e) => handleChange('applicant_email', e.target.value)} required /></div>
+              </>
+            )}
             <div className="field">
               <label>Course opting for</label>
               <select value={form.course_interested} onChange={(e) => handleChange('course_interested', e.target.value)} required>
