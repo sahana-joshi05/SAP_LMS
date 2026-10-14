@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Layers, Plus, Wallet, ArrowRight } from 'lucide-react';
+import { Users, Layers, Plus, Wallet, ArrowRight, Bell, CalendarClock, BriefcaseBusiness, ClipboardList } from 'lucide-react';
 import Layout from '../components/Layout.jsx';
 import StatCard from '../components/StatCard.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -8,15 +8,26 @@ import Badge from '../components/Badge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api.js';
 
+const UPDATE_MODULES = [
+  { to: '/operations/exams', title: 'Exam announcements', description: 'Schedule, syllabus, duration, and instructions', icon: CalendarClock },
+  { to: '/operations/batch-updates', title: 'Batch updates', description: 'Timing, venue, trainer, or material changes', icon: Layers },
+  { to: '/operations/placements', title: 'Placement updates', description: 'Company, role, eligibility, deadline, and drive details', icon: BriefcaseBusiness },
+  { to: '/operations/trainer-updates', title: 'Trainer updates', description: 'Priority instructions and action deadlines', icon: ClipboardList },
+];
+
 export default function OperationsDashboard() {
   const { auth } = useAuth();
   const [stats, setStats] = useState(null);
   const [batches, setBatches] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => {
+  const load = () => {
     api.getOverview(auth.token).then(setStats).catch(() => {});
     api.listBatches(auth.token).then(setBatches).catch(() => {});
-  }, []);
+    api.listNotifications(auth.token).then(setNotifications).catch(() => {});
+  };
+
+  useEffect(() => { load(); }, []);
 
   // Feature: at-a-glance breakdown of batches by lifecycle status
   const statusCounts = batches.reduce((acc, b) => { acc[b.status] = (acc[b.status] || 0) + 1; return acc; }, {});
@@ -36,6 +47,44 @@ export default function OperationsDashboard() {
           <StatCard icon={Layers} num={statusCounts.upcoming || 0} label="Upcoming Batches" />
         </div>
       )}
+
+      <div className="card-grid-2">
+        <div className="card">
+          <h3><Bell /> Operations updates</h3>
+          <div className="module-link-grid">
+            {UPDATE_MODULES.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link to={item.to} className="module-link" key={item.to}>
+                  <div className="list-item-icon"><Icon /></div>
+                  <div style={{ flex: 1 }}>
+                    <div className="list-item-title">{item.title}</div>
+                    <div className="list-item-sub">{item.description}</div>
+                  </div>
+                  <ArrowRight size={16} color="var(--muted)" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Recent updates</h3>
+          {notifications.length === 0 ? (
+            <div className="empty-state">No announcements sent yet.</div>
+          ) : (
+            notifications.slice(0, 5).map((item) => (
+              <div className="list-item-row" key={item.id}>
+                <div style={{ flex: 1 }}>
+                  <div className="list-item-title">{item.subject || 'Update'}</div>
+                  <div className="list-item-sub update-message">{item.message}</div>
+                </div>
+                <Badge status={item.template_key || item.status} />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       <div className="card-grid-2">
         <div className="card">

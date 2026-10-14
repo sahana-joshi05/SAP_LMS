@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, Layers, UserPlus, ClipboardList,
   Wallet, GraduationCap, LogOut, Search, Clock, LifeBuoy, BarChart3, ClipboardCheck,
-  Link as LinkIcon, ReceiptText, MessageSquare, Pencil
+  Link as LinkIcon, ReceiptText, MessageSquare, Pencil, CalendarClock, BriefcaseBusiness
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import logo from '../assets/logo-icon-square.png';
@@ -36,6 +36,10 @@ const MENUS = {
   ],
   operations: [
     { to: '/operations', label: 'Dashboard', end: true, icon: LayoutDashboard },
+    { to: '/operations/exams', label: 'Exam Updates', icon: CalendarClock },
+    { to: '/operations/batch-updates', label: 'Batch Updates', icon: Layers },
+    { to: '/operations/placements', label: 'Placements', icon: BriefcaseBusiness },
+    { to: '/operations/trainer-updates', label: 'Trainer Updates', icon: ClipboardList },
     { to: '/operations/batches', label: 'Batches', icon: Layers },
     { to: '/operations/students', label: 'Students & Fees', icon: Wallet },
     { to: '/operations/support', label: 'Support', icon: LifeBuoy },

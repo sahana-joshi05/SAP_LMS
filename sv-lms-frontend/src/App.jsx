@@ -20,6 +20,7 @@ import CounselorReceipts from './pages/CounselorReceipts.jsx';
 import CounselorReports from './pages/CounselorReports.jsx';
 import CounselorRequestMessages from './pages/CounselorRequestMessages.jsx';
 import OperationsDashboard from './pages/OperationsDashboard.jsx';
+import OperationsAnnouncementPage from './pages/OperationsAnnouncementPage.jsx';
 import OperationsBatches from './pages/OperationsBatches.jsx';
 import OperationsStudents from './pages/OperationsStudents.jsx';
 import SeoDashboard from './pages/SeoDashboard.jsx';
@@ -76,6 +77,10 @@ export default function App() {
 
       {/* Operations */}
       <Route path="/operations" element={<ProtectedRoute allowedRoles={['operations']}><OperationsDashboard /></ProtectedRoute>} />
+      <Route path="/operations/exams" element={<ProtectedRoute allowedRoles={['operations']}><OperationsAnnouncementPage type="exam" /></ProtectedRoute>} />
+      <Route path="/operations/batch-updates" element={<ProtectedRoute allowedRoles={['operations']}><OperationsAnnouncementPage type="batch" /></ProtectedRoute>} />
+      <Route path="/operations/placements" element={<ProtectedRoute allowedRoles={['operations']}><OperationsAnnouncementPage type="placement" /></ProtectedRoute>} />
+      <Route path="/operations/trainer-updates" element={<ProtectedRoute allowedRoles={['operations']}><OperationsAnnouncementPage type="trainer" /></ProtectedRoute>} />
       <Route path="/operations/batches" element={<ProtectedRoute allowedRoles={['operations']}><OperationsBatches /></ProtectedRoute>} />
       <Route path="/operations/students" element={<ProtectedRoute allowedRoles={['operations']}><OperationsStudents /></ProtectedRoute>} />
       <Route path="/operations/support" element={<ProtectedRoute allowedRoles={['operations']}><SupportTickets /></ProtectedRoute>} />

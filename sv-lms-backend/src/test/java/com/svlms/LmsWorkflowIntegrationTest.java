@@ -243,6 +243,84 @@ class LmsWorkflowIntegrationTest {
     }
 
     @Test
+    void counselorPickup_movesOwnNewLeadIntoFollowUp() throws Exception {
+        String counselorToken = loginAndGetToken("counselor@sapinstitute.com", DEMO_PASSWORD);
+
+        MvcResult leadResult = mockMvc.perform(post("/api/leads")
+                        .header("Authorization", bearer(counselorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "Pickup Follow Up Lead",
+                                "email", "pickup-followup@example.com",
+                                "phone", "9000000001"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("New"))
+                .andReturn();
+        long leadId = objectMapper.readTree(leadResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(post("/api/leads/" + leadId + "/assign-to-me")
+                        .header("Authorization", bearer(counselorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("Follow_up"));
+
+        mockMvc.perform(get("/api/leads").header("Authorization", bearer(counselorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id==" + leadId + " && @.status=='Follow_up')]").exists());
+    }
+
+    @Test
+    void operationsCanBroadcastDashboardUpdatesToStudentsAndTrainers() throws Exception {
+        String superAdminToken = loginAndGetToken("superadmin@sapinstitute.com", DEMO_PASSWORD);
+        String operationsToken = loginAndGetToken("operations@sapinstitute.com", DEMO_PASSWORD);
+        String trainerToken = loginAndGetToken("trainer@sapinstitute.com", DEMO_PASSWORD);
+
+        mockMvc.perform(post("/api/users")
+                        .header("Authorization", bearer(superAdminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "Announcement Student",
+                                "email", "announcementstudent@example.com",
+                                "password", DEMO_PASSWORD,
+                                "role", "student"))))
+                .andExpect(status().isOk());
+        String studentToken = loginAndGetToken("announcementstudent@example.com", DEMO_PASSWORD);
+
+        mockMvc.perform(post("/api/notifications")
+                        .header("Authorization", bearer(operationsToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "recipient_role", "STUDENT",
+                                "template_key", "placement_update",
+                                "subject", "Placement Update",
+                                "message", "Placement drive starts this Friday",
+                                "status", "sent"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipient_role").value("STUDENT"))
+                .andExpect(jsonPath("$.created_count").exists());
+
+        mockMvc.perform(get("/api/notifications").header("Authorization", bearer(studentToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.subject=='Placement Update' && @.message=='Placement drive starts this Friday')]").exists());
+
+        mockMvc.perform(post("/api/notifications")
+                        .header("Authorization", bearer(operationsToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "recipient_role", "TRAINER",
+                                "template_key", "trainer_update",
+                                "subject", "Trainer Update",
+                                "message", "Please update batch attendance today",
+                                "status", "sent"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipient_role").value("TRAINER"))
+                .andExpect(jsonPath("$.created_count").exists());
+
+        mockMvc.perform(get("/api/notifications").header("Authorization", bearer(trainerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.subject=='Trainer Update' && @.message=='Please update batch attendance today')]").exists());
+    }
+
+    @Test
     void loginRateLimiter_locksOutAfterRepeatedFailures() throws Exception {
         // Uses a made-up email rather than a shared seeded account - the rate limiter
         // keys purely on the email string in the request (see LoginRateLimiter.java),

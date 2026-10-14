@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Layers, Users, Upload, CalendarCheck, FileText, Video, Link2, ClipboardList } from 'lucide-react';
+import { Layers, Users, Upload, CalendarCheck, FileText, Video, Link2, ClipboardList, Bell } from 'lucide-react';
 import Layout from '../components/Layout.jsx';
 import StatCard from '../components/StatCard.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import Badge from '../components/Badge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api.js';
 
@@ -14,6 +15,7 @@ export default function TrainerDashboard() {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [roster, setRoster] = useState([]);
   const [content, setContent] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [msg, setMsg] = useState(null);
   const [totalStudents, setTotalStudents] = useState(0);
 
@@ -28,6 +30,7 @@ export default function TrainerDashboard() {
       const details = await Promise.all(list.map((b) => api.getBatch(auth.token, b.id).catch(() => ({ roster: [] }))));
       setTotalStudents(details.reduce((sum, d) => sum + (d.roster?.length || 0), 0));
     }).catch((e) => setMsg({ type: 'error', text: e.message }));
+    api.listNotifications(auth.token).then(setNotifications).catch(() => {});
   }, []);
 
   const openBatch = async (batchId) => {
@@ -81,23 +84,42 @@ export default function TrainerDashboard() {
         <StatCard icon={Users} num={totalStudents} label="Total Students" />
       </div>
 
-      <div className="card">
-        <h3><Layers /> Assigned batches</h3>
-        {batches.length === 0 ? (
-          <div className="empty-state">No batches assigned to you yet.</div>
-        ) : (
-          batches.map((b) => (
-            <div className="entity-card" key={b.id}>
-              <div className="entity-card-header">
-                <div>
-                  <div className="entity-card-title">{b.course_name} &mdash; {b.batch_name}</div>
-                  <div className="entity-card-meta">{b.mode} &middot; {b.timing || 'No timing set'}</div>
+      <div className="card-grid-2">
+        <div className="card">
+          <h3><Layers /> Assigned batches</h3>
+          {batches.length === 0 ? (
+            <div className="empty-state">No batches assigned to you yet.</div>
+          ) : (
+            batches.map((b) => (
+              <div className="entity-card" key={b.id}>
+                <div className="entity-card-header">
+                  <div>
+                    <div className="entity-card-title">{b.course_name} &mdash; {b.batch_name}</div>
+                    <div className="entity-card-meta">{b.mode} &middot; {b.timing || 'No timing set'}</div>
+                  </div>
+                  <button className="btn small secondary" onClick={() => openBatch(b.id)}>Open</button>
                 </div>
-                <button className="btn small secondary" onClick={() => openBatch(b.id)}>Open</button>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
+
+        <div className="card">
+          <h3><Bell /> Updates</h3>
+          {notifications.length === 0 ? (
+            <div className="empty-state">No updates yet.</div>
+          ) : (
+            notifications.slice(0, 6).map((item) => (
+              <div className="list-item-row" key={item.id}>
+                <div style={{ flex: 1 }}>
+                  <div className="list-item-title">{item.subject || 'Update'}</div>
+                  <div className="list-item-sub update-message">{item.message}</div>
+                </div>
+                <Badge status={item.template_key || item.status} />
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {selectedBatch && (

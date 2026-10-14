@@ -12,6 +12,7 @@ const FUNNEL_STAGES = [
   { key: 'New', color: 'var(--role-superadmin)' },
   { key: 'Contacted', color: 'var(--amber)' },
   { key: 'Interested', color: 'var(--blue)' },
+  { key: 'Follow_up', color: 'var(--role-counselor)' },
   { key: 'Enrolled', color: 'var(--success)' },
   { key: 'Lost', color: 'var(--danger)' },
 ];
@@ -20,14 +21,21 @@ export default function CounselorDashboard() {
   const { auth } = useAuth();
   const [leads, setLeads] = useState([]);
 
-  useEffect(() => { api.listLeads(auth.token).then(setLeads).catch(() => {}); }, []);
+  const load = () => api.listLeads(auth.token).then(setLeads).catch(() => {});
 
-  const counts = leads.reduce((acc, l) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
+  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const id = setInterval(load, 12000);
+    return () => clearInterval(id);
+  }, [auth.token]);
+
+  const myLeads = leads.filter((lead) => String(lead.assigned_counselor_id || '') === String(auth.user.id));
+  const counts = myLeads.reduce((acc, l) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
   const maxCount = Math.max(1, ...FUNNEL_STAGES.map((s) => counts[s.key] || 0));
 
-  // Feature: leads that still need a follow-up call (New or Contacted), most recent first
-  const needsFollowUp = leads
-    .filter((l) => l.status === 'New' || l.status === 'Contacted')
+  const needsFollowUp = myLeads
+    .filter((l) => ['New', 'Contacted', 'Follow_up', 'Call_Not_Received'].includes(l.status))
     .slice(0, 5);
 
   return (
@@ -39,10 +47,10 @@ export default function CounselorDashboard() {
       />
 
       <div className="stat-grid">
-        <StatCard icon={Users} num={leads.length} label="Total Leads" />
+        <StatCard icon={Users} num={myLeads.length} label="My Leads" />
         <StatCard icon={UserCheck} num={counts.New || 0} label="New" />
         <StatCard icon={Heart} num={counts.Interested || 0} label="Interested" />
-        <StatCard icon={GraduationCap} num={counts.Enrolled || 0} label="Enrolled" />
+        <StatCard icon={GraduationCap} num={counts.Follow_up || 0} label="Follow-ups" />
       </div>
 
       <div className="card-grid-2">

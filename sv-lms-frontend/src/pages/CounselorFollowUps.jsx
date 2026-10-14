@@ -15,9 +15,10 @@ export default function CounselorFollowUps() {
   const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [followUps, setFollowUps] = useState([]);
+  const [rowsPerPage, setRowsPerPage] = useState('10');
   const [typeFilter, setTypeFilter] = useState('');
-  const [fromDate, setFromDate] = useState(new Date().toISOString().slice(0, 10));
-  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10));
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState({});
   const [activeLead, setActiveLead] = useState(null);
@@ -30,6 +31,11 @@ export default function CounselorFollowUps() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const id = setInterval(load, 12000);
+    return () => clearInterval(id);
+  }, [auth.token]);
 
   useEffect(() => {
     const leadId = searchParams.get('leadId');
@@ -49,14 +55,15 @@ export default function CounselorFollowUps() {
 
   const rows = leads.filter((lead) => {
     const belongsToCounselor = String(lead.assigned_counselor_id || '') === String(auth.user.id);
+    const isActiveFollowUp = !['Lost', 'Enrolled', 'Converted'].includes(lead.status);
     const q = search.trim().toLowerCase();
     const matchesSearch = !q || [lead.name, lead.phone, lead.email, lead.status, `AT${lead.id}`].some((v) => (v || '').toLowerCase().includes(q));
     const matchesType = !typeFilter || lead.status === typeFilter;
     const date = (lead.created_at || '').slice(0, 10);
     const matchesFrom = !fromDate || !date || date >= fromDate;
     const matchesTo = !toDate || !date || date <= toDate;
-    return belongsToCounselor && matchesSearch && matchesType && matchesFrom && matchesTo;
-  });
+    return belongsToCounselor && isActiveFollowUp && matchesSearch && matchesType && matchesFrom && matchesTo;
+  }).slice(0, Number(rowsPerPage));
 
   const expandAll = () => setExpanded(Object.fromEntries(rows.map((lead) => [lead.id, true])));
   const collapseAll = () => setExpanded({});
@@ -95,7 +102,11 @@ export default function CounselorFollowUps() {
       <div className="crm-filter-panel">
         <div className="field">
           <label>Rows</label>
-          <select defaultValue="10"><option>10 per page</option><option>25 per page</option><option>50 per page</option></select>
+          <select value={rowsPerPage} onChange={(e) => setRowsPerPage(e.target.value)}>
+            <option value="10">10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+          </select>
         </div>
         <div className="field">
           <label>Type</label>

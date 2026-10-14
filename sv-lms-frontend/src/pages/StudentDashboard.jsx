@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, FileText, Video, Link2, ClipboardList, CalendarCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Video, Link2, ClipboardList, CalendarCheck, Bell } from 'lucide-react';
 import Layout from '../components/Layout.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Badge from '../components/Badge.jsx';
@@ -14,6 +14,7 @@ export default function StudentDashboard() {
   const [attendance, setAttendance] = useState([]);
   const [fees, setFees] = useState([]);
   const [contentByBatch, setContentByBatch] = useState({});
+  const [notifications, setNotifications] = useState([]);
   const [msg, setMsg] = useState(null);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function StudentDashboard() {
     api.getMyAttendance(auth.token).then(setAttendance).catch(() => {});
     // Feature: fee due summary, previously fetched but never shown in the UI
     api.getMyFees(auth.token).then(setFees).catch(() => {});
+    api.listNotifications(auth.token).then(setNotifications).catch(() => {});
   }, []);
 
   // Feature: attendance percentage, computed from present/late vs total sessions
@@ -82,6 +84,25 @@ export default function StudentDashboard() {
           )}
         </div>
 
+        <div className="card">
+          <h3><Bell /> Updates</h3>
+          {notifications.length === 0 ? (
+            <div className="empty-state">No updates yet.</div>
+          ) : (
+            notifications.slice(0, 6).map((item) => (
+              <div className="list-item-row" key={item.id}>
+                <div style={{ flex: 1 }}>
+                  <div className="list-item-title">{item.subject || 'Update'}</div>
+                  <div className="list-item-sub update-message">{item.message}</div>
+                </div>
+                <Badge status={item.template_key || item.status} />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="card-grid-2">
         <div className="card">
           <h3><CalendarCheck /> My attendance</h3>
           {attendancePct !== null && (

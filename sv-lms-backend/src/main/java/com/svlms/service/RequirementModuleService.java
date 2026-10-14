@@ -1,11 +1,14 @@
 package com.svlms.service;
 
 import com.svlms.exception.BadRequestException;
+import com.svlms.entity.User;
+import com.svlms.repository.UserRepository;
 import com.svlms.security.AuthPrincipal;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Statement;
 import java.time.LocalDateTime;
@@ -19,10 +22,12 @@ public class RequirementModuleService {
 
     private final JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
+    private final UserRepository userRepository;
 
-    public RequirementModuleService(JdbcTemplate jdbcTemplate, AuditService auditService) {
+    public RequirementModuleService(JdbcTemplate jdbcTemplate, AuditService auditService, UserRepository userRepository) {
         this.jdbcTemplate = jdbcTemplate;
         this.auditService = auditService;
+        this.userRepository = userRepository;
     }
 
     public List<Map<String, Object>> followUps(AuthPrincipal principal) {
@@ -215,11 +220,43 @@ public class RequirementModuleService {
         return rows("SELECT * FROM notifications ORDER BY created_at DESC");
     }
 
+    @Transactional
     public Map<String, Object> createNotification(Map<String, Object> request, AuthPrincipal principal) {
         require(request, "message");
-        Map<String, Object> saved = insert("notifications", request, List.of(
+        Map<String, Object> normalizedRequest = normalizeNotificationRequest(request);
+        Object roleValue = normalizedRequest.get("recipient_role");
+        if (roleValue != null && !roleValue.toString().isBlank()) {
+            User.Role recipientRole = parseRole(roleValue.toString());
+            List<User> recipients = userRepository.findByRole(recipientRole).stream()
+                    .filter(user -> User.Status.ACTIVE.equals(user.getStatus()))
+                    .toList();
+            if (recipients.isEmpty()) {
+                throw new BadRequestException("No active " + recipientRole.name().toLowerCase() + " users found");
+            }
+            for (User recipient : recipients) {
+                Map<String, Object> recipientRequest = new LinkedHashMap<>(normalizedRequest);
+                recipientRequest.remove("recipient_role");
+                recipientRequest.put("recipient_user_id", recipient.getId());
+                Map<String, Object> extra = new LinkedHashMap<>();
+                extra.put("created_by", principal.getId());
+                extra.put("created_at", LocalDateTime.now());
+                Map<String, Object> saved = insert("notifications", recipientRequest, List.of(
+                    "recipient_user_id", "channel", "template_key", "subject", "message", "status", "sent_at"
+                ), extra);
+                auditService.record(principal, "CREATE_NOTIFICATION", "notifications", id(saved), saved.toString());
+            }
+            return Map.of(
+                    "recipient_role", recipientRole.name(),
+                    "created_count", recipients.size(),
+                    "message", "Notification sent to " + recipients.size() + " " + recipientRole.name().toLowerCase() + " user(s)"
+            );
+        }
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("created_by", principal.getId());
+        extra.put("created_at", LocalDateTime.now());
+        Map<String, Object> saved = insert("notifications", normalizedRequest, List.of(
             "recipient_user_id", "channel", "template_key", "subject", "message", "status", "sent_at"
-        ), Map.of("created_by", principal.getId()));
+        ), extra);
         auditService.record(principal, "CREATE_NOTIFICATION", "notifications", id(saved), saved.toString());
         return saved;
     }
@@ -285,6 +322,14 @@ public class RequirementModuleService {
         Map<String, Object> normalized = new LinkedHashMap<>(request);
         normalizeDateTimeField(normalized, "follow_up_at");
         normalizeDateTimeField(normalized, "next_follow_up_at");
+        return normalized;
+    }
+
+    private Map<String, Object> normalizeNotificationRequest(Map<String, Object> request) {
+        Map<String, Object> normalized = new LinkedHashMap<>(request);
+        normalized.putIfAbsent("channel", "in_app");
+        normalized.putIfAbsent("status", "queued");
+        normalizeDateTimeField(normalized, "sent_at");
         return normalized;
     }
 
@@ -406,5 +451,13 @@ public class RequirementModuleService {
 
     private boolean isAdminLike(AuthPrincipal principal) {
         return "SUPERADMIN".equals(principal.getRole()) || "ADMIN".equals(principal.getRole());
+    }
+
+    private User.Role parseRole(String value) {
+        try {
+            return User.Role.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("recipient_role must be a valid user role");
+        }
     }
 }

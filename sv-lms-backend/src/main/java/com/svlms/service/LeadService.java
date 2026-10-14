@@ -111,6 +111,11 @@ public class LeadService {
         Lead lead = findLeadOrThrow(id);
         if (lead.getAssignedCounselor() != null) {
             if (lead.getAssignedCounselor().getId().equals(principal.getId())) {
+                if (Lead.Status.New.equals(lead.getStatus())) {
+                    lead.setStatus(Lead.Status.Follow_up);
+                    lead.setUpdatedAt(LocalDateTime.now());
+                    leadRepository.save(lead);
+                }
                 return toResponse(lead);
             }
             throw new ConflictException("This lead is already taken by another counselor");
@@ -141,6 +146,7 @@ public class LeadService {
         if (request.getNotes() != null) {
             lead.setNotes(request.getNotes());
         }
+        lead.setUpdatedAt(LocalDateTime.now());
         leadRepository.save(lead);
         return toResponse(lead);
     }
